@@ -1,0 +1,37 @@
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Node and frontend build output
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+*.tsbuildinfo
+
+# Uploaded files and local datasets (Phase 1 does not store uploads)
+uploads/
+backend/uploads/
+data/raw/
+data/processed/
+
+# Logs and OS files
+logs/
+*.log
+.DS_Store
+Thumbs.db
