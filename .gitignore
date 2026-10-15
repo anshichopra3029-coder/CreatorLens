@@ -24,9 +24,10 @@ dist-ssr/
 *.local
 *.tsbuildinfo
 
-# Uploaded files and local datasets (Phase 1 does not store uploads)
+# Uploaded files and local datasets
 uploads/
 backend/uploads/
+backend/data/
 data/raw/
 data/processed/
 

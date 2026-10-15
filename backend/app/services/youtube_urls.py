@@ -1,0 +1,47 @@
+"""Parse public YouTube URLs. This does not fetch or download a video."""
+
+from __future__ import annotations
+
+from urllib.parse import parse_qs, urlparse
+
+
+class YoutubeUrlError(Exception):
+    def __init__(self, detail: str) -> None:
+        self.detail = detail
+        super().__init__(detail)
+
+
+def parse_youtube_video_id(value: str) -> str:
+    text = value.strip()
+    if text == "" or len(text) > 500:
+        raise YoutubeUrlError("Paste a YouTube video URL.")
+    parsed = urlparse(text)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise YoutubeUrlError("Paste a full http or https YouTube URL.")
+    host = parsed.hostname.lower().removeprefix("www.")
+    video_id = ""
+    if host in {"youtube.com", "m.youtube.com", "music.youtube.com"}:
+        parts = [part for part in parsed.path.split("/") if part]
+        if parsed.path == "/watch":
+            video_id = parse_qs(parsed.query).get("v", [""])[0]
+        elif parts and parts[0] in {"shorts", "embed", "live"} and len(parts) >= 2:
+            video_id = parts[1]
+        else:
+            raise YoutubeUrlError("That YouTube URL does not point at one video.")
+    elif host == "youtu.be":
+        video_id = parsed.path.strip("/").split("/")[0]
+    else:
+        raise YoutubeUrlError("Only YouTube watch, youtu.be, Shorts, embed, and live URLs are supported.")
+    if not _valid_video_id(video_id):
+        raise YoutubeUrlError("That URL does not contain a valid YouTube video ID.")
+    return video_id
+
+
+def canonical_watch_url(video_id: str) -> str:
+    return f"https://www.youtube.com/watch?v={video_id}"
+
+
+def _valid_video_id(video_id: str) -> bool:
+    if len(video_id) != 11:
+        return False
+    return all(character.isalnum() or character in {"-", "_"} for character in video_id)

@@ -2,8 +2,13 @@ import { DemoBanner, MetricCaption } from "../components/common/DemoBanner.tsx";
 import { QueryPanel } from "../components/common/QueryPanel.tsx";
 import { useApiQuery } from "../hooks/useApiQuery.ts";
 import { getInsights } from "../services/api.ts";
+import { ActiveDocumentSwitch } from "../components/documents/ActiveDocumentSwitch.tsx";
 
 export function InsightsPage() {
+  return <ActiveDocumentSwitch demo={<InsightsDemo />} />;
+}
+
+function InsightsDemo() {
   const insights = useApiQuery(() => getInsights(), "insights");
 
   return (

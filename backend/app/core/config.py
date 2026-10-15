@@ -55,9 +55,15 @@ class Settings:
         self.max_upload_rows = _positive_int("MAX_UPLOAD_ROWS", 20000)
         self.max_upload_columns = _positive_int("MAX_UPLOAD_COLUMNS", 100)
         self.gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        self.youtube_api_key = os.getenv("YOUTUBE_API_KEY", "").strip()
+        self.youtube_cache_seconds = _positive_int("YOUTUBE_CACHE_SECONDS", 21600)
+        self.youtube_oauth_client_id = os.getenv("YOUTUBE_OAUTH_CLIENT_ID", "").strip()
         self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip() or "gemini-3.8-flash"
         self.max_video_size_mb = _positive_int("MAX_VIDEO_SIZE_MB", 100)
         self.gemini_file_timeout_seconds = _positive_int("GEMINI_FILE_TIMEOUT_SECONDS", 180)
+        self.max_document_size_mb = _positive_int("MAX_DOCUMENT_SIZE_MB", 15)
+        default_data = Path(__file__).resolve().parents[2] / "data"
+        self.data_dir = Path(os.getenv("CREATORLENS_DATA_DIR", str(default_data)))
 
     @property
     def max_upload_bytes(self) -> int:
@@ -66,6 +72,10 @@ class Settings:
     @property
     def max_video_bytes(self) -> int:
         return self.max_video_size_mb * 1024 * 1024
+
+    @property
+    def max_document_bytes(self) -> int:
+        return self.max_document_size_mb * 1024 * 1024
 
     @property
     def cors_origins(self) -> list[str]:

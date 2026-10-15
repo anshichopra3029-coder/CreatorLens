@@ -9,8 +9,13 @@ import { useApiQuery } from "../hooks/useApiQuery.ts";
 import { getContentComparison, getDashboardSummary, getPosts, getTrends } from "../services/api.ts";
 import { formatNumber, formatRate, startDateForRange } from "../services/format.ts";
 import type { DemoFilters, TimeRange } from "../types/api.ts";
+import { ActiveDocumentSwitch } from "../components/documents/ActiveDocumentSwitch.tsx";
 
 export function AnalyticsPage() {
+  return <ActiveDocumentSwitch demo={<AnalyticsDemo />} />;
+}
+
+function AnalyticsDemo() {
   const [category, setCategory] = useState("all");
   const [platform, setPlatform] = useState("all");
   const [range, setRange] = useState<TimeRange>("all");

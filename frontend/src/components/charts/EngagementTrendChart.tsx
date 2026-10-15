@@ -22,11 +22,13 @@ function peakPoint(points: TrendPoint[]): TrendPoint | null {
   }, null);
 }
 
-export function EngagementTrendChart({ points }: { points: TrendPoint[] }) {
+export function EngagementTrendChart({ points, caption: captionOverride }: { points: TrendPoint[]; caption?: string }) {
   const peak = peakPoint(points);
-  const caption = peak
-    ? `Highest weekly average in this demo series is ${formatRate(peak.avg_engagement_rate)} in the week of ${peak.label}.`
-    : "No engagement rate is available for this series.";
+  const caption =
+    captionOverride ??
+    (peak
+      ? `Highest weekly average in this demo series is ${formatRate(peak.avg_engagement_rate)} in the week of ${peak.label}.`
+      : "No engagement rate is available for this series.");
 
   return (
     <figure>

@@ -8,8 +8,13 @@ import { PostsTable } from "../components/dashboard/PostsTable.tsx";
 import { useApiQuery } from "../hooks/useApiQuery.ts";
 import { getContentComparison, getDashboardSummary, getInsights, getPosts, getTrends } from "../services/api.ts";
 import { formatNumber, formatRate } from "../services/format.ts";
+import { ActiveDocumentSwitch } from "../components/documents/ActiveDocumentSwitch.tsx";
 
 export function DashboardPage() {
+  return <ActiveDocumentSwitch demo={<DashboardDemo />} />;
+}
+
+function DashboardDemo() {
   const summary = useApiQuery(() => getDashboardSummary(), "summary");
   const trends = useApiQuery(() => getTrends(), "trends");
   const comparison = useApiQuery(() => getContentComparison(), "comparison");

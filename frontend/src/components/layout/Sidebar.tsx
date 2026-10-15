@@ -1,4 +1,4 @@
-import { LayoutDashboard, Lightbulb, LineChart, Settings, Sparkles, Upload, X } from "lucide-react";
+import { Files, LayoutDashboard, Lightbulb, LineChart, Settings, Sparkles, Upload, Video, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Logo } from "../common/Logo.tsx";
@@ -6,6 +6,8 @@ import { Logo } from "../common/Logo.tsx";
 const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/upload", label: "Upload Dataset", icon: Upload },
+  { to: "/youtube", label: "Analyze YouTube", icon: Video },
+  { to: "/documents", label: "Saved analyses", icon: Files },
   { to: "/analytics", label: "Analytics", icon: LineChart },
   { to: "/insights", label: "Insights", icon: Lightbulb },
   { to: "/predictions", label: "Predictions", icon: Sparkles },
@@ -62,7 +64,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           })}
         </nav>
         <p className="px-4 py-4 text-xs leading-5 text-slate-500">
-          Phase 1 uses a labelled demo dataset for charts. Uploaded files are checked and then discarded.
+          Saved document analyses replace the demo charts until you choose demo data again. YouTube analyses stay on their own page.
         </p>
       </aside>
     </>

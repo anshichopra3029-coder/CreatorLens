@@ -2,11 +2,19 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { formatRate } from "../../services/format.ts";
 import type { GroupMetric } from "../../types/api.ts";
 
-export function CategoryComparisonChart({ categories }: { categories: GroupMetric[] }) {
+export function CategoryComparisonChart({
+  categories,
+  caption: captionOverride,
+}: {
+  categories: GroupMetric[];
+  caption?: string;
+}) {
   const leader = categories.find((item) => item.avg_engagement_rate !== null) ?? null;
-  const caption = leader
-    ? `${leader.name} leads this demo comparison at ${formatRate(leader.avg_engagement_rate)} across ${leader.post_count} posts.`
-    : "No category rate is available.";
+  const caption =
+    captionOverride ??
+    (leader
+      ? `${leader.name} leads this demo comparison at ${formatRate(leader.avg_engagement_rate)} across ${leader.post_count} posts.`
+      : "No category rate is available.");
 
   return (
     <figure>

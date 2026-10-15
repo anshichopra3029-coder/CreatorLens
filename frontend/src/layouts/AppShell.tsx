@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "../components/layout/Sidebar.tsx";
 import { TopBar } from "../components/layout/TopBar.tsx";
+import { useActiveDocumentId } from "../components/documents/ActiveDocumentSwitch.tsx";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/upload": "Upload Dataset",
+  "/youtube": "Analyze YouTube Video",
+  "/documents": "Saved analyses",
   "/analytics": "Analytics",
   "/insights": "Insights",
   "/predictions": "Predictions",
@@ -16,16 +19,31 @@ const BADGES: Record<string, string> = {
   "/dashboard": "Demo Mode",
   "/analytics": "Demo Mode",
   "/insights": "Demo Mode",
-  "/upload": "File is not stored",
+  "/upload": "CSV, PDF, DOCX",
+  "/youtube": "Public statistics",
   "/predictions": "No model yet",
   "/settings": "No account yet",
 };
 
 export function AppShell() {
   const location = useLocation();
+  const activeDocumentId = useActiveDocumentId();
   const [menuOpen, setMenuOpen] = useState(false);
-  const title = TITLES[location.pathname] ?? "CreatorLens";
-  const badge = BADGES[location.pathname] ?? null;
+  const onAnalysis = location.pathname.startsWith("/analysis/");
+  const onYoutubeAnalysis = location.pathname.startsWith("/youtube/");
+  const title = onAnalysis
+    ? "Analysis"
+    : onYoutubeAnalysis
+      ? "YouTube analysis"
+      : (TITLES[location.pathname] ?? "CreatorLens");
+  const demoPage = location.pathname === "/dashboard" || location.pathname === "/analytics" || location.pathname === "/insights";
+  const badge = onAnalysis || onYoutubeAnalysis
+    ? "Saved analysis"
+    : demoPage
+      ? activeDocumentId
+        ? "Saved analysis"
+        : "Demo Mode"
+      : (BADGES[location.pathname] ?? null);
 
   useEffect(() => {
     document.title = `${title} · CreatorLens`;

@@ -8,6 +8,8 @@ Video analysis is a separate route and calls Gemini only when configured.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.document_routes import router as document_router
+from app.api.youtube_routes import router as youtube_router
 from app.api.routes import router
 from app.api.video_routes import router as video_router
 from app.core.config import settings
@@ -28,6 +30,8 @@ app.add_middleware(
 
 app.include_router(router, prefix="/api")
 app.include_router(video_router, prefix="/api")
+app.include_router(document_router, prefix="/api")
+app.include_router(youtube_router, prefix="/api")
 
 
 @app.get("/", tags=["health"])
@@ -36,5 +40,7 @@ def service_index() -> dict[str, str]:
         "service": "creatorlens-api",
         "health": "/api/health",
         "ai_status": "/api/ai/status",
+        "documents": "/api/documents",
+        "youtube": "/api/youtube/analyses",
         "docs": "/docs",
     }
