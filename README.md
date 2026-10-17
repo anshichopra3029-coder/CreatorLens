@@ -7,7 +7,7 @@ Phase 1 is explicit about what is real:
 - Dashboard, analytics, and insights numbers come from the built-in demo file `backend/app/data/demo_posts.csv`. Every demo response includes `"is_demo": true`.
 - `POST /api/upload` validates a real CSV in memory. It does not save the file and does not run an analysis.
 - `POST /api/documents` analyses a CSV, PDF, or DOCX file and saves it in a local SQLite database. CSV numbers are calculated in Python. A Gemini summary is added only when `GEMINI_API_KEY` is set.
-- There is no locally trained model, no Clerk sign-in, and no PostgreSQL database.
+- There is no locally trained model and no PostgreSQL database. Accounts use the local SQLite auth store.
 - Video analysis is a separate backend path. It calls the Gemini API only when `GEMINI_API_KEY` is set on the server. The CSV dashboard does not use it.
 
 The product and architecture notes live in `CreatorLens_Docs/`.
@@ -80,7 +80,9 @@ Copy-Item .env.example .env
 
 `GET /api/ai/status` reports whether the key and SDK are present. It does not call Gemini and does not return the key. `POST /api/videos/analyze` returns an error instead of an analysis when the key is missing.
 
-Public YouTube analysis needs `YOUTUBE_API_KEY` in the same server `.env`. Leave it blank and the YouTube routes return an error instead of invented statistics. `YOUTUBE_CACHE_SECONDS` defaults to 21600. `YOUTUBE_OAUTH_CLIENT_ID` and `YOUTUBE_OAUTH_CLIENT_SECRET` are reserved for a later creator connection and are not used yet.
+Public YouTube metadata is read with `yt-dlp` on the server. A YouTube Data API key is not required. `YOUTUBE_CACHE_SECONDS` defaults to 21600. `GEMINI_API_KEY` is still required for written suggestions. `YOUTUBE_OAUTH_CLIENT_ID` and `YOUTUBE_OAUTH_CLIENT_SECRET` are reserved for a later creator connection and are not used yet.
+
+An analytics CSV does not need a YouTube key. Preview it, then analyze it, from Analyze YouTube. A sample with ten dated rows is `backend/app/data/sample_video_analytics.csv`. A forecast is trained only when one video has at least eight dated view counts. One public snapshot is stored without a trained model. Engagement from a file is `(likes + comments) / views × 100`, or `(likes + comments + shares) / views × 100` when the shares column is present. Missing counts stay missing.
 
 ## Frontend
 
@@ -131,13 +133,38 @@ A successful response reports the filename, size, row count, and column names. I
 | GET | `/api/ai/status` | Whether Gemini is configured, without the API key |
 | POST | `/api/videos/analyze` | One uploaded video file sent to Gemini, or an error if it is not configured |
 | POST | `/api/youtube/preview` | Public metadata and statistics for one YouTube URL |
-| POST | `/api/youtube/analyses` | Save that public snapshot and an optional Gemini narrative |
+| POST | `/api/youtube/analyses` | Save that public snapshot, metrics, and an optional Gemini narrative |
+| POST | `/api/youtube/analyses/{id}/refresh` | Fetch the video again and save a new snapshot |
+| POST | `/api/youtube/analyses/{id}/roast` | Roast one saved video from its public counts. `style` is `friendly`, `savage`, or `brutal`. `force` asks for another take. |
+| POST | `/api/youtube/analyses/{id}/roast/challenge` | Reassess a roast after a question. It does not automatically defend the first verdict. |
+| POST | `/api/youtube/analyses/{id}/roast/fix` | Draft title, thumbnail, and hook alternatives for a roast. |
+| POST | `/api/youtube/analyses/{id}/experiment` | Save the roast's next move as one experiment |
+| POST | `/api/youtube/analyses/{id}/experiment/result` | Record a note, a later view count, or that the task was done. That is not a measured improvement. |
 | GET | `/api/youtube/analyses` | Saved YouTube analyses |
 | GET | `/api/youtube/analyses/{id}` | One saved YouTube analysis |
 | GET | `/api/youtube/oauth/status` | Creator OAuth is not connected; retention stays empty |
+| POST | `/api/analytics/preview` | Validate an analytics CSV and return a preview |
+| POST | `/api/analytics/analyses` | Calculate metrics, an eligible forecast, and optional Gemini suggestions |
+| GET | `/api/analytics/analyses` | Saved analytics CSV analyses |
+| GET | `/api/analytics/analyses/{id}` | One saved analytics CSV analysis |
 
 The dashboard routes accept optional `category`, `platform`, `start_date`, and `end_date` query parameters. Dates use `YYYY-MM-DD`. An unknown category returns an empty demo result rather than invented rows.
 
+## Accounts
+
+Registration, email verification, login, logout, and password reset use `backend/data/auth.sqlite`. Passwords are stored as PBKDF2-SHA256 hashes. The session is an HttpOnly `cl_session` cookie. State-changing requests from a signed-in browser send `X-CSRF-Token` from memory, not from localStorage. The Vite dev server proxies `/api` to `http://127.0.0.1:8000` so that cookie stays on the app origin.
+
+Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, and `SMTP_TLS` to deliver verification and reset mail. When `SMTP_HOST` is empty and `APP_ENV` is not `production`, the link is written to the server log and to `email_outbox` so local checks can read it. The API never returns the token. Production without SMTP does not send mail, and an unverified account cannot open saved analyses.
+
+Saved YouTube analyses, documents, analytics files, diagnoses, and experiments are queried with the user id from the session. Rows whose `user_id` is null stay in the database and are not visible to any account. They are not assigned to the first person who registers.
+
 ## Not in this phase
 
-Clerk authentication, PostgreSQL, SQLAlchemy, migrations, and scikit-learn are intentionally absent. Saved document and YouTube analyses use local SQLite files in `backend/data`, which is not committed. Public YouTube metadata uses `YOUTUBE_API_KEY` on the server only. Transcripts, impressions, click-through rate, and audience retention stay unavailable until a creator connects YouTube through OAuth. The predictions page explains that no model exists and does not show a made-up score. Gemini summaries and answers are omitted, not invented, when `GEMINI_API_KEY` is missing.
+PostgreSQL, SQLAlchemy, and scikit-learn are intentionally absent. Saved document, YouTube, and analytics-file analyses use local SQLite files in `backend/data`, which is not committed. Public YouTube metadata is extracted with `yt-dlp` and does not use a YouTube Data API key. Transcripts, impressions, click-through rate, and audience retention from YouTube stay unavailable until a creator connects through OAuth. A view forecast is trained only when one video has at least eight dated view counts. A single public snapshot is stored without a trained forecast. Gemini suggestions are omitted, not invented, when `GEMINI_API_KEY` is missing.
+
+Try the sample analytics file from the Analyze YouTube page:
+
+```powershell
+# The file is backend\app\data\sample_video_analytics.csv
+# Preview it in the app, then choose Analyze file.
+```

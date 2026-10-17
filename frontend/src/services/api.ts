@@ -1,3 +1,4 @@
+import { applyXhrSession, noteUnauthorized } from "./session.ts";
 import type {
   ContentComparisonResponse,
   DashboardSummary,
@@ -24,11 +25,15 @@ export function apiBaseUrl(): string {
   if (typeof configured === "string" && configured.trim() !== "") {
     return configured.trim().replace(/\/$/, "");
   }
-  return "http://localhost:8000";
+  return "";
 }
 
 function unavailableMessage(): string {
-  return `The API is unavailable at ${apiBaseUrl()}. Start the backend and try again.`;
+  const base = apiBaseUrl();
+  if (base === "") {
+    return "The API is unavailable. Start the backend on port 8000 so this app can proxy /api.";
+  }
+  return `The API is unavailable at ${base}. Start the backend and try again.`;
 }
 
 function detailMessage(payload: unknown, fallback: string): string {
@@ -63,6 +68,7 @@ async function request<T>(path: string): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${apiBaseUrl()}${path}`, {
+      credentials: "include",
       headers: { Accept: "application/json" },
     });
   } catch {
@@ -70,6 +76,9 @@ async function request<T>(path: string): Promise<T> {
   }
 
   const payload: unknown = await response.json().catch(() => null);
+  if (response.status === 401) {
+    noteUnauthorized();
+  }
   if (!response.ok) {
     throw new ApiError(response.status, detailMessage(payload, `Request failed (${response.status}).`));
   }
@@ -105,6 +114,7 @@ export function uploadCsv(file: File, onProgress: (percent: number) => void): Pr
     const requestBody = new XMLHttpRequest();
     requestBody.open("POST", `${apiBaseUrl()}/api/upload`);
     requestBody.setRequestHeader("Accept", "application/json");
+    applyXhrSession(requestBody);
     requestBody.upload.onprogress = (event) => {
       if (event.lengthComputable && event.total > 0) {
         onProgress(Math.round((event.loaded / event.total) * 100));

@@ -21,8 +21,8 @@ const BADGES: Record<string, string> = {
   "/insights": "Demo Mode",
   "/upload": "CSV, PDF, DOCX",
   "/youtube": "Public statistics",
-  "/predictions": "No model yet",
-  "/settings": "No account yet",
+  "/predictions": "Dated history",
+  "/settings": "Local",
 };
 
 export function AppShell() {
@@ -31,13 +31,16 @@ export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const onAnalysis = location.pathname.startsWith("/analysis/");
   const onYoutubeAnalysis = location.pathname.startsWith("/youtube/");
+  const onPerformance = location.pathname.startsWith("/performance/");
   const title = onAnalysis
     ? "Analysis"
     : onYoutubeAnalysis
       ? "YouTube analysis"
-      : (TITLES[location.pathname] ?? "CreatorLens");
+      : onPerformance
+        ? "Creator analytics"
+        : (TITLES[location.pathname] ?? "CreatorLens");
   const demoPage = location.pathname === "/dashboard" || location.pathname === "/analytics" || location.pathname === "/insights";
-  const badge = onAnalysis || onYoutubeAnalysis
+  const badge = onAnalysis || onYoutubeAnalysis || onPerformance
     ? "Saved analysis"
     : demoPage
       ? activeDocumentId

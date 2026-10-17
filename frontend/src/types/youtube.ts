@@ -1,3 +1,7 @@
+import type { DiagnosisEvidence, PerformanceDiagnosis } from "./diagnosis.ts";
+import type { PredictionResult } from "./prediction.ts";
+import type { ContentExperiment, VideoRoast } from "./roast.ts";
+
 export interface PublicStatistics {
   views: number | null;
   likes: number | null;
@@ -16,10 +20,13 @@ export interface VideoMetadata {
   title: string;
   description: string;
   channel_title: string;
+  channel_id: string | null;
   thumbnail_url: string | null;
   published_at: string | null;
   duration_seconds: number | null;
   privacy_status: string;
+  category: string | null;
+  tags: string[];
 }
 
 export interface TranscriptStatus {
@@ -76,6 +83,8 @@ export interface YoutubePreview {
   transcript: TranscriptStatus;
   analytics: AnalyticsAvailability;
   cached: boolean;
+  views_per_day: number | null;
+  views_per_day_note: string;
   is_demo: false;
 }
 
@@ -88,9 +97,19 @@ export interface YoutubeAnalysis {
   analytics: AnalyticsAvailability;
   comments_status: "available" | "disabled" | "unavailable";
   comments: CommentSnippet[];
+  views_per_day: number | null;
+  views_per_day_note: string;
+  prediction: PredictionResult;
+  warnings: string[];
   narrative_status: "generated" | "unavailable";
   narrative_message: string;
   narrative: YoutubeNarrative | null;
+  diagnosis_status: "generated" | "calculated" | "unavailable";
+  diagnosis_message: string;
+  diagnosis: PerformanceDiagnosis | null;
+  diagnosis_evidence: DiagnosisEvidence | null;
+  roasts: Record<string, VideoRoast>;
+  experiment: ContentExperiment | null;
   model: string | null;
   cached_metadata: boolean;
   file_saved: true;
@@ -108,6 +127,9 @@ export interface YoutubeListItem {
   likes: number | null;
   comments: number | null;
   engagement_rate: number | null;
+  views_per_day: number | null;
+  prediction_eligible: boolean;
+  prediction_message: string;
   file_saved: true;
 }
 

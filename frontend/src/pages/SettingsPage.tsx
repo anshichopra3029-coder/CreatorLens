@@ -22,7 +22,7 @@ export function SettingsPage() {
   return (
     <div className="space-y-4">
       <p className="max-w-2xl text-sm leading-6 text-slate-600">
-        Account features arrive in a later phase. Nothing on this page is saved to a profile or a database.
+        Saved analyses stay on this machine. The API address stays on the server.
       </p>
 
       <section className="card p-5">
@@ -31,7 +31,7 @@ export function SettingsPage() {
           Appearance stays light in this phase. The API address comes from <code>VITE_API_BASE_URL</code>.
         </p>
         <p className="mt-3 text-sm text-slate-800">
-          Current API base URL: <span className="font-medium">{apiBaseUrl()}</span>
+          Current API base URL: <span className="font-medium">{apiBaseUrl() || "same origin (/api)"}</span>
         </p>
         <button
           type="button"
@@ -63,20 +63,10 @@ export function SettingsPage() {
       </section>
 
       <section className="card p-5">
-        <h2 className="text-base font-semibold">Profile and account</h2>
+        <h2 className="text-base font-semibold">Saved work</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Sign-in, profiles, and saved preferences are not part of this build. The fields below are disabled on purpose.
+          YouTube analyses, documents, and analytics files are saved without an account.
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="field-label" htmlFor="display-name">Display name</label>
-            <input id="display-name" className="field" value="" disabled placeholder="Available in a later phase" />
-          </div>
-          <div>
-            <label className="field-label" htmlFor="account-email">Email</label>
-            <input id="account-email" className="field" value="" disabled placeholder="Available in a later phase" />
-          </div>
-        </div>
       </section>
     </div>
   );

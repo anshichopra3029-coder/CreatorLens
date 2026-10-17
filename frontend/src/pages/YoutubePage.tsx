@@ -1,9 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { QueryPanel } from "../components/common/QueryPanel.tsx";
 import { useApiQuery } from "../hooks/useApiQuery.ts";
 import { formatNumber, formatRate } from "../services/format.ts";
+import { analyzeAnalytics, listAnalytics, previewAnalytics } from "../services/analytics.ts";
 import { analyzeYoutube, getYoutubeOauthStatus, listYoutubeAnalyses, previewYoutube } from "../services/youtube.ts";
+import type { AnalyticsPreview } from "../types/analytics.ts";
 import { parseYoutubeVideoId } from "../services/youtubeUrl.ts";
 import type { YoutubePreview } from "../types/youtube.ts";
 
@@ -26,9 +28,13 @@ export function YoutubePage() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<YoutubePreview | null>(null);
+  const uploads = useApiQuery(() => listAnalytics(), "analytics-files");
+  const [file, setFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<AnalyticsPreview | null>(null);
+  const [filePhase, setFilePhase] = useState<Phase>("idle");
+  const [fileError, setFileError] = useState<string | null>(null);
 
-  async function onPreview(event: FormEvent) {
-    event.preventDefault();
+  async function onPreview() {
     setError(null);
     setPreview(null);
     try {
@@ -51,6 +57,13 @@ export function YoutubePage() {
 
   async function onAnalyze() {
     setError(null);
+    try {
+      parseYoutubeVideoId(url);
+    } catch (caught: unknown) {
+      setPhase(preview ? "ready" : "idle");
+      setError(caught instanceof Error ? caught.message : "That URL is not a supported YouTube video.");
+      return;
+    }
     setPhase("analyzing");
     try {
       const savedAnalysis = await analyzeYoutube(url.trim());
@@ -61,16 +74,55 @@ export function YoutubePage() {
     }
   }
 
+  async function onFilePreview() {
+    if (!file) {
+      return;
+    }
+    setFileError(null);
+    setFilePreview(null);
+    setFilePhase("previewing");
+    try {
+      const next = await previewAnalytics(file);
+      setFilePreview(next);
+      setFilePhase("ready");
+    } catch (caught: unknown) {
+      setFilePhase("idle");
+      setFileError(caught instanceof Error ? caught.message : "The file could not be checked.");
+    }
+  }
+
+  async function onFileAnalyze() {
+    if (!file) {
+      return;
+    }
+    setFileError(null);
+    setFilePhase("analyzing");
+    try {
+      const savedFile = await analyzeAnalytics(file);
+      navigate(`/performance/${savedFile.id}`);
+    } catch (caught: unknown) {
+      setFilePhase(filePreview ? "ready" : "idle");
+      setFileError(caught instanceof Error ? caught.message : "The file analysis failed.");
+    }
+  }
+
   const busy = phase === "previewing" || phase === "analyzing";
+  const fileBusy = filePhase === "previewing" || filePhase === "analyzing";
 
   return (
     <div className="space-y-6">
       <p className="max-w-2xl text-sm leading-6 text-slate-600">
-        Paste a public YouTube watch, youtu.be, or Shorts URL. The server reads public metadata and statistics.
+        Paste a public YouTube watch, youtu.be, Shorts, or embed URL. The server reads public metadata with yt-dlp.
         It does not download the video.
       </p>
 
-      <form className="card space-y-4 p-5" onSubmit={(event) => void onPreview(event)}>
+      <form
+        className="card space-y-4 p-5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onAnalyze();
+        }}
+      >
         <div>
           <label className="field-label" htmlFor="youtube-url">
             YouTube URL
@@ -92,10 +144,10 @@ export function YoutubePage() {
         </div>
         <div className="flex flex-wrap gap-3">
           <button type="submit" className="btn-primary" disabled={busy || url.trim() === ""}>
-            {phase === "previewing" ? "Checking the video…" : "Preview video"}
+            {phase === "analyzing" ? "Saving the analysis…" : "Analyze Video"}
           </button>
-          <button type="button" className="btn-secondary" disabled={busy || preview === null} onClick={() => void onAnalyze()}>
-            {phase === "analyzing" ? "Saving the analysis…" : "Start analysis"}
+          <button type="button" className="btn-secondary" disabled={busy || url.trim() === ""} onClick={() => void onPreview()}>
+            {phase === "previewing" ? "Checking the video…" : "Preview video"}
           </button>
         </div>
         {phase === "previewing" ? (
@@ -147,6 +199,99 @@ export function YoutubePage() {
         ) : (
           <p className="mt-2 text-sm text-slate-600">Checking whether a creator YouTube account is connected.</p>
         )}
+      </section>
+
+      <section className="card space-y-4 p-5">
+        <h2 className="text-base font-semibold">Upload creator analytics</h2>
+        <p className="text-sm leading-6 text-slate-600">
+          Use a CSV with a video ID or title, and views, likes, or comments. Dates, shares, impressions, click-through
+          rate, watch time, and subscribers are used when those columns are present.
+        </p>
+        <input
+          className="block text-sm"
+          type="file"
+          accept=".csv,text/csv"
+          onChange={(event) => {
+            setFile(event.target.files?.[0] ?? null);
+            setFilePreview(null);
+            setFilePhase("idle");
+            setFileError(null);
+          }}
+        />
+        <div className="flex flex-wrap gap-3">
+          <button type="button" className="btn-secondary" disabled={fileBusy || file === null} onClick={() => void onFilePreview()}>
+            {filePhase === "previewing" ? "Checking the file…" : "Preview file"}
+          </button>
+          <button type="button" className="btn-primary" disabled={fileBusy || filePreview === null} onClick={() => void onFileAnalyze()}>
+            {filePhase === "analyzing" ? "Saving the analysis…" : "Analyze file"}
+          </button>
+        </div>
+        {fileError ? (
+          <p className="text-sm text-red-700" role="alert">
+            {fileError}
+          </p>
+        ) : null}
+        {filePreview ? (
+          <div role="status">
+            <p className="text-sm text-slate-700">
+              {filePreview.row_count} rows · {filePreview.video_count} videos · {filePreview.forecast_message}
+            </p>
+            <div className="mt-3 overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <caption className="sr-only">Preview rows</caption>
+                <thead className="text-slate-500">
+                  <tr>
+                    <th className="py-2 pr-4 font-medium">Video</th>
+                    <th className="py-2 pr-4 font-medium">Date</th>
+                    <th className="py-2 pr-4 font-medium">Views</th>
+                    <th className="py-2 pr-4 font-medium">Likes</th>
+                    <th className="py-2 pr-4 font-medium">Comments</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filePreview.preview.map((row) => (
+                    <tr key={`${row.video_id}-${row.observed_at ?? "none"}`} className="border-t border-slate-200">
+                      <td className="py-2 pr-4">{row.title}</td>
+                      <td className="py-2 pr-4">{row.observed_at ?? "—"}</td>
+                      <td className="py-2 pr-4">{row.views ?? "—"}</td>
+                      <td className="py-2 pr-4">{row.likes ?? "—"}</td>
+                      <td className="py-2 pr-4">{row.comments ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-base font-semibold">Previous analytics files</h2>
+        <QueryPanel
+          query={uploads}
+          loadingLabel="Loading analytics files"
+          emptyTitle="No analytics files yet"
+          emptyBody="Preview a CSV and then analyze it to save the metrics."
+          isEmpty={(data) => data.analyses.length === 0}
+        >
+          {(data) => (
+            <ul className="card divide-y divide-slate-200">
+              {data.analyses.map((item) => (
+                <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                  <div>
+                    <p className="text-sm font-semibold">{item.filename}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {item.video_count} videos · {item.observation_count} rows · {formatRate(item.average_engagement_rate)}
+                    </p>
+                  </div>
+                  <Link to={`/performance/${item.id}`} className="btn-secondary">
+                    Open
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </QueryPanel>
       </section>
 
       <section className="space-y-3">

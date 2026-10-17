@@ -24,17 +24,19 @@ export function TopBar({ title, badge, menuOpen, onMenu }: TopBarProps) {
         </button>
         <h1 className="truncate text-lg font-semibold tracking-tight text-slate-900">{title}</h1>
       </div>
-      {badge ? (
-        <span
-          className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium ${
-            demoBadge
-              ? "border-amber-200 bg-amber-50 text-amber-900"
-              : "border-slate-200 bg-slate-50 text-slate-600"
-          }`}
-        >
-          {badge}
-        </span>
-      ) : null}
+      <div className="flex shrink-0 items-center gap-2">
+        {badge ? (
+          <span
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
+              demoBadge
+                ? "border-amber-200 bg-amber-50 text-amber-900"
+                : "border-slate-200 bg-slate-50 text-slate-600"
+            }`}
+          >
+            {badge}
+          </span>
+        ) : null}
+      </div>
     </header>
   );
 }

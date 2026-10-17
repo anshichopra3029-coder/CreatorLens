@@ -1,13 +1,18 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { PerformanceDiagnosisPanel } from "../diagnosis/PerformanceDiagnosis.tsx";
+import { RoastCourt } from "./RoastCourt.tsx";
 import { KpiCard } from "../dashboard/KpiCard.tsx";
 import { QueryPanel } from "../common/QueryPanel.tsx";
 import { useApiQuery } from "../../hooks/useApiQuery.ts";
 import { formatNumber, formatRate } from "../../services/format.ts";
-import { getYoutubeAnalysis, listYoutubeAnalyses } from "../../services/youtube.ts";
+import { getYoutubeAnalysis, listYoutubeAnalyses, refreshYoutube } from "../../services/youtube.ts";
 import type { EvidencePoint, YoutubeAnalysis, YoutubeListItem, YoutubeNarrative } from "../../types/youtube.ts";
 import {
   CrossVideoEngagementChart,
   EngagementCountsChart,
+  ForecastChart,
+  InteractionDonut,
   RetentionChart,
   SnapshotTrendChart,
 } from "./YoutubeCharts.tsx";
@@ -192,21 +197,39 @@ export function YoutubeResults({ analysisId }: { analysisId: string }) {
       isEmpty={() => false}
     >
       {(data) => (
-        <ResultsBody data={data} others={saved.status === "success" ? saved.data.analyses : []} />
+        <ResultsBody key={data.id} data={data} others={saved.status === "success" ? saved.data.analyses : []} />
       )}
     </QueryPanel>
   );
 }
 
 function ResultsBody({ data, others }: { data: YoutubeAnalysis; others: YoutubeListItem[] }) {
-  const stats = data.statistics;
+  const [analysis, setAnalysis] = useState(data);
+  const stats = analysis.statistics;
+  const navigate = useNavigate();
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    setRefreshError(null);
+    try {
+      const next = await refreshYoutube(analysis.id);
+      navigate(`/youtube/${next.id}`);
+    } catch (caught: unknown) {
+      setRefreshError(caught instanceof Error ? caught.message : "The refresh failed.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="card overflow-hidden">
         <div className="grid gap-4 p-5 sm:grid-cols-[180px_minmax(0,1fr)]">
-          {data.metadata.thumbnail_url ? (
+          {analysis.metadata.thumbnail_url ? (
             <img
-              src={data.metadata.thumbnail_url}
+              src={analysis.metadata.thumbnail_url}
               alt=""
               className="h-28 w-full rounded-lg object-cover sm:h-24"
             />
@@ -217,26 +240,42 @@ function ResultsBody({ data, others }: { data: YoutubeAnalysis; others: YoutubeL
           )}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Saved YouTube analysis</p>
-            <h2 className="mt-2 text-xl font-semibold">{data.metadata.title}</h2>
+            <h2 className="mt-2 text-xl font-semibold">{analysis.metadata.title}</h2>
             <p className="mt-2 text-sm text-slate-600">
-              {data.metadata.channel_title} · {data.metadata.privacy_status} · Saved {data.created_at}
+              {analysis.metadata.channel_title}
+              {analysis.metadata.channel_id ? ` · ${analysis.metadata.channel_id}` : ""}
+              {analysis.metadata.category ? ` · ${analysis.metadata.category}` : ""} · {analysis.metadata.privacy_status} · Saved{" "}
+              {analysis.created_at}
             </p>
-            <a className="mt-2 inline-block text-sm font-semibold text-indigo-700" href={data.metadata.url}>
+            {analysis.metadata.tags.length > 0 ? (
+              <p className="mt-2 text-sm text-slate-500">{analysis.metadata.tags.join(", ")}</p>
+            ) : null}
+            <a className="mt-2 inline-block text-sm font-semibold text-indigo-700" href={analysis.metadata.url}>
               Open on YouTube
             </a>
           </div>
         </div>
         <div className="flex flex-wrap gap-3 border-t border-slate-200 px-5 py-4">
-          <button type="button" className="btn-secondary" onClick={() => downloadReport(data)}>
+          <button type="button" className="btn-secondary" onClick={() => downloadReport(analysis)}>
             Export JSON report
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => void onRefresh()} disabled={refreshing}>
+            {refreshing ? "Fetching fresh statistics…" : "Refresh from YouTube"}
           </button>
           <Link to="/youtube" className="text-sm font-semibold text-indigo-700">
             Analyse another video
           </Link>
+          {refreshError ? (
+            <p className="text-sm text-red-700" role="alert">
+              {refreshError}
+            </p>
+          ) : null}
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="Public statistics">
+      <RoastCourt analysis={analysis} onChange={setAnalysis} />
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Public statistics">
         <KpiCard
           label="Views"
           value={countLabel(stats.views, stats.views_available)}
@@ -254,49 +293,78 @@ function ResultsBody({ data, others }: { data: YoutubeAnalysis; others: YoutubeL
         />
         <KpiCard
           label="Duration"
-          value={formatDuration(data.metadata.duration_seconds)}
-          detail={data.metadata.duration_seconds === null ? "Duration was not returned" : "From the public video metadata"}
+          value={formatDuration(analysis.metadata.duration_seconds)}
+          detail={analysis.metadata.duration_seconds === null ? "Duration was not returned" : "From the public video metadata"}
         />
         <KpiCard
           label="Engagement rate"
           value={formatRate(stats.engagement_rate)}
           detail={stats.engagement_rate === null ? "Needs public views, likes, and comments" : stats.engagement_formula}
         />
+        <KpiCard
+          label="Views per day"
+          value={analysis.views_per_day === null ? "Unavailable" : formatNumber(Math.round(analysis.views_per_day))}
+          detail={analysis.views_per_day_note}
+        />
       </section>
       <p className="text-xs leading-5 text-slate-500">{stats.engagement_note}</p>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <EngagementCountsChart statistics={stats} />
-        <CrossVideoEngagementChart currentId={data.id} analyses={others} />
-        <SnapshotTrendChart videoId={data.metadata.video_id} analyses={others} />
-        <RetentionChart analytics={data.analytics} />
+        <InteractionDonut likes={stats.likes} comments={stats.comments} />
+        <CrossVideoEngagementChart currentId={analysis.id} analyses={others} />
+        <SnapshotTrendChart videoId={analysis.metadata.video_id} analyses={others} />
+        <RetentionChart analytics={analysis.analytics} />
       </div>
+
+      <ForecastChart
+        eligible={analysis.prediction.eligible}
+        message={analysis.prediction.message}
+        limitations={analysis.prediction.limitations}
+        series={analysis.prediction.series}
+        method={analysis.prediction.method}
+      />
+      {analysis.warnings.length > 0 ? (
+        <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
+          {analysis.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      ) : null}
+
+      <PerformanceDiagnosisPanel
+        diagnosis={analysis.diagnosis}
+        evidence={analysis.diagnosis_evidence}
+        message={analysis.diagnosis_message}
+        retrying={refreshing}
+        onRetry={() => void onRefresh()}
+      />
 
       <section className="card p-5">
         <h2 className="text-base font-semibold">What was measured</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
-          <li>Public statistics come from the YouTube Data API snapshot saved with this analysis.</li>
+          <li>Public statistics come from the yt-dlp metadata snapshot saved with this analysis. The video file was not downloaded.</li>
           <li>
-            Transcript: {data.transcript.available ? "text was supplied to the written analysis." : data.transcript.reason}
+            Transcript: {analysis.transcript.available ? "text was supplied to the written analysis." : analysis.transcript.reason}
           </li>
-          <li>Creator analytics: {data.analytics.reason}</li>
-          <li>Comments: {data.comments_status}. {data.comments.length} public comment snippets were stored.</li>
+          <li>Creator analytics: {analysis.analytics.reason}</li>
+          <li>Comments: {analysis.comments_status}. {analysis.comments.length} public comment snippets were stored.</li>
         </ul>
       </section>
 
-      {data.narrative ? (
-        <NarrativeSections narrative={data.narrative} model={data.model} />
+      {analysis.narrative ? (
+        <NarrativeSections narrative={analysis.narrative} model={analysis.model} />
       ) : (
         <section className="card border-amber-200 bg-amber-50 p-5" role="status">
           <h2 className="text-base font-semibold text-amber-950">Written analysis unavailable</h2>
-          <p className="mt-2 text-sm leading-6 text-amber-950">{data.narrative_message}</p>
+          <p className="mt-2 text-sm leading-6 text-amber-950">{analysis.narrative_message}</p>
         </section>
       )}
 
-      {data.metadata.description ? (
+      {analysis.metadata.description ? (
         <section className="card p-5">
           <h2 className="text-base font-semibold">Description used as metadata</h2>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{data.metadata.description}</p>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{analysis.metadata.description}</p>
         </section>
       ) : null}
     </div>

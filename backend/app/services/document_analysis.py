@@ -89,6 +89,7 @@ def analyze_upload(
     *,
     filename: str,
     content_type: str | None,
+    user_id: str,
     client: Any | None = None,
 ) -> DocumentAnalysisResponse:
     safe_name = Path(filename).name.strip()
@@ -167,23 +168,23 @@ def analyze_upload(
     )
     stored_path = _write_file(document_id, safe_name, raw)
     try:
-        insert_document(record, stored_path, extracted_text[:200_000])
+        insert_document(record, stored_path, extracted_text[:200_000], user_id)
     except Exception:
         stored_path.unlink(missing_ok=True)
         raise
-    saved = get_document(document_id)
+    saved = get_document(document_id, user_id)
     if saved is None or not stored_path.is_file():
         raise DocumentProcessError(500, "The analysis could not be saved.")
     return saved
 
 
-def answer_question(document_id: str, question: str, *, client: Any | None = None) -> DocumentAnalysisResponse:
+def answer_question(document_id: str, question: str, *, user_id: str, client: Any | None = None) -> DocumentAnalysisResponse:
     cleaned = question.strip()
     if cleaned == "":
         raise DocumentProcessError(400, "Enter a question about the document.")
     if len(cleaned) > 500:
         raise DocumentProcessError(400, "Ask a question of 500 characters or fewer.")
-    text = stored_text(document_id)
+    text = stored_text(document_id, user_id)
     if text is None:
         raise DocumentProcessError(404, "That saved analysis was not found.")
     if text.strip() == "":
@@ -205,8 +206,8 @@ def answer_question(document_id: str, question: str, *, client: Any | None = Non
         uncertainty_note=parsed.uncertainty_note,
         created_at=_now(),
     )
-    add_question(document_id, record)
-    saved = get_document(document_id)
+    add_question(document_id, record, user_id)
+    saved = get_document(document_id, user_id)
     if saved is None or not any(item.id == record.id for item in saved.questions):
         raise DocumentProcessError(500, "The answer was not saved.")
     return saved

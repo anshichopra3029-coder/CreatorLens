@@ -1,4 +1,5 @@
 import { ApiError, apiBaseUrl } from "./api.ts";
+import { applyXhrSession, noteUnauthorized, sessionHeaders } from "./session.ts";
 import type { DocumentAnalysis, DocumentListResponse } from "../types/documents.ts";
 
 function unavailableMessage(): string {
@@ -20,12 +21,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(`${apiBaseUrl()}${path}`, {
       ...init,
-      headers: { Accept: "application/json", ...(init?.headers ?? {}) },
+      credentials: "include",
+      headers: sessionHeaders(init?.method ?? "GET", init?.headers),
     });
   } catch {
     throw new ApiError(0, unavailableMessage());
   }
   const payload: unknown = await response.json().catch(() => null);
+  if (response.status === 401) {
+    noteUnauthorized();
+  }
   if (!response.ok) {
     throw new ApiError(response.status, detailMessage(payload, `Request failed (${response.status}).`));
   }
@@ -53,6 +58,7 @@ export function uploadDocument(file: File, onProgress: (percent: number) => void
     const requestBody = new XMLHttpRequest();
     requestBody.open("POST", `${apiBaseUrl()}/api/documents`);
     requestBody.setRequestHeader("Accept", "application/json");
+    applyXhrSession(requestBody);
     requestBody.upload.onprogress = (event) => {
       if (event.lengthComputable && event.total > 0) {
         onProgress(Math.round((event.loaded / event.total) * 100));
@@ -70,6 +76,9 @@ export function uploadDocument(file: File, onProgress: (percent: number) => void
           reject(new ApiError(requestBody.status, "The server returned a response that was not JSON."));
           return;
         }
+      }
+      if (requestBody.status === 401) {
+        noteUnauthorized();
       }
       if (requestBody.status >= 200 && requestBody.status < 300) {
         resolve(payload as DocumentAnalysis);

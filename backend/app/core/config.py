@@ -47,6 +47,19 @@ def _positive_int(name: str, default: int) -> int:
     return value
 
 
+def _bounded_float(name: str, default: float, low: float, high: float) -> float:
+    raw = os.getenv(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be a number.") from exc
+    if not low <= value <= high:
+        raise RuntimeError(f"{name} must be between {low} and {high}.")
+    return value
+
+
 class Settings:
     def __init__(self) -> None:
         self.app_env = os.getenv("APP_ENV", "development")
@@ -55,10 +68,18 @@ class Settings:
         self.max_upload_rows = _positive_int("MAX_UPLOAD_ROWS", 20000)
         self.max_upload_columns = _positive_int("MAX_UPLOAD_COLUMNS", 100)
         self.gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        # Accepted so an older .env line does not crash. Public metadata uses yt-dlp and does not read this value.
         self.youtube_api_key = os.getenv("YOUTUBE_API_KEY", "").strip()
         self.youtube_cache_seconds = _positive_int("YOUTUBE_CACHE_SECONDS", 21600)
         self.youtube_oauth_client_id = os.getenv("YOUTUBE_OAUTH_CLIENT_ID", "").strip()
+        self.smtp_host = os.getenv("SMTP_HOST", "").strip()
+        self.smtp_port = _positive_int("SMTP_PORT", 587)
+        self.smtp_username = os.getenv("SMTP_USERNAME", "").strip()
+        self.smtp_password = os.getenv("SMTP_PASSWORD", "").strip()
+        self.smtp_from = os.getenv("SMTP_FROM", "").strip()
+        self.smtp_tls = os.getenv("SMTP_TLS", "true").strip().lower() not in {"0", "false", "no"}
         self.gemini_model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash").strip() or "gemini-3.8-flash"
+        self.roast_temperature = _bounded_float("ROAST_TEMPERATURE", 1.4, 0.0, 2.0)
         self.max_video_size_mb = _positive_int("MAX_VIDEO_SIZE_MB", 100)
         self.gemini_file_timeout_seconds = _positive_int("GEMINI_FILE_TIMEOUT_SECONDS", 180)
         self.max_document_size_mb = _positive_int("MAX_DOCUMENT_SIZE_MB", 15)

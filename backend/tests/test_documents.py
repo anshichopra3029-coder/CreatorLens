@@ -58,8 +58,8 @@ def _post(client, name: str, content: bytes, content_type: str):
     return client.post("/api/documents", files={"file": (name, content, content_type)})
 
 
-def test_csv_calculates_engagement_and_persists_without_gemini(client, isolated):
-    response = _post(client, "posts.csv", CSV, "text/csv")
+def test_csv_calculates_engagement_and_persists_without_gemini(member, isolated):
+    response = _post(member, "posts.csv", CSV, "text/csv")
     assert response.status_code == 200
     body = response.json()
     assert body["file_saved"] is True
@@ -74,11 +74,11 @@ def test_csv_calculates_engagement_and_persists_without_gemini(client, isolated)
     assert profile["total_interactions"] == 205
     assert profile["best_category"] == "Tutorial"
     assert profile["posts_analyzed"] == 3
-    saved = client.get(f"/api/documents/{body['id']}")
+    saved = member.get(f"/api/documents/{body['id']}")
     assert saved.status_code == 200
     assert saved.json()["csv_profile"]["avg_engagement_rate"] == 5.0
     assert (isolated / "files" / f"{body['id']}.csv").is_file()
-    listed = client.get("/api/documents")
+    listed = member.get("/api/documents")
     assert listed.json()["count"] == 1
 
 
@@ -90,25 +90,25 @@ def test_csv_metadata_route_still_does_not_save(client, isolated):
     assert list(isolated.glob("files/*")) == []
 
 
-def test_header_only_csv_is_rejected(client, isolated):
-    response = _post(client, "empty.csv", b"post_id,views\n", "text/csv")
+def test_header_only_csv_is_rejected(member, isolated):
+    response = _post(member, "empty.csv", b"post_id,views\n", "text/csv")
     assert response.status_code == 400
-    assert client.get("/api/documents").json()["count"] == 0
+    assert member.get("/api/documents").json()["count"] == 0
 
 
-def test_unsupported_file_is_rejected(client, isolated):
-    response = _post(client, "notes.txt", b"hello", "text/plain")
+def test_unsupported_file_is_rejected(member, isolated):
+    response = _post(member, "notes.txt", b"hello", "text/plain")
     assert response.status_code == 415
     assert "not supported" in response.json()["detail"]
 
 
-def test_docx_text_is_extracted_and_saved(client, isolated, tmp_path):
+def test_docx_text_is_extracted_and_saved(member, isolated, tmp_path):
     path = tmp_path / "menu.docx"
     document = Document()
     document.add_paragraph("The spring menu launches on 12 May 2026. The budget is 40 dollars.")
     document.save(path)
     response = _post(
-        client,
+        member,
         "menu.docx",
         path.read_bytes(),
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -119,12 +119,12 @@ def test_docx_text_is_extracted_and_saved(client, isolated, tmp_path):
     assert body["file_saved"] is True
     assert "40 dollars" in body["text_preview"]
     assert body["summary"] is None
-    again = client.get(f"/api/documents/{body['id']}")
+    again = member.get(f"/api/documents/{body['id']}")
     assert "40 dollars" in again.json()["text_preview"]
 
 
-def test_text_pdf_extracts_visible_words(client, isolated):
-    response = _post(client, "budget.pdf", _text_pdf("Budget note spend 40 dollars."), "application/pdf")
+def test_text_pdf_extracts_visible_words(member, isolated):
+    response = _post(member, "budget.pdf", _text_pdf("Budget note spend 40 dollars."), "application/pdf")
     assert response.status_code == 200
     body = response.json()
     assert body["format"] == "pdf"
@@ -132,17 +132,17 @@ def test_text_pdf_extracts_visible_words(client, isolated):
     assert body["status"] == "extracted"
     assert "40 dollars" in body["text_preview"]
     assert body["summary"] is None
-    again = client.get(f"/api/documents/{body['id']}")
+    again = member.get(f"/api/documents/{body['id']}")
     assert "40 dollars" in again.json()["text_preview"]
 
 
-def test_blank_pdf_is_saved_as_unreadable(client, isolated):
+def test_blank_pdf_is_saved_as_unreadable(member, isolated):
     from pypdf import PdfWriter
 
     writer = PdfWriter()
     writer.add_blank_page(width=200, height=200)
     raw = writer.to_bytes() if hasattr(writer, "to_bytes") else _writer_bytes(writer)
-    response = _post(client, "scan.pdf", raw, "application/pdf")
+    response = _post(member, "scan.pdf", raw, "application/pdf")
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "unreadable"
@@ -152,29 +152,29 @@ def test_blank_pdf_is_saved_as_unreadable(client, isolated):
     assert (isolated / "files" / f"{body['id']}.pdf").is_file()
 
 
-def test_corrupted_pdf_is_not_saved(client, isolated):
-    response = _post(client, "broken.pdf", b"not a pdf", "application/pdf")
+def test_corrupted_pdf_is_not_saved(member, isolated):
+    response = _post(member, "broken.pdf", b"not a pdf", "application/pdf")
     assert response.status_code == 400
-    assert client.get("/api/documents").json()["count"] == 0
+    assert member.get("/api/documents").json()["count"] == 0
     assert list((isolated / "files").glob("*")) == [] if (isolated / "files").exists() else True
 
 
-def test_question_without_key_does_not_invent_an_answer(client, isolated, tmp_path):
+def test_question_without_key_does_not_invent_an_answer(member, isolated, tmp_path):
     path = tmp_path / "note.docx"
     document = Document()
     document.add_paragraph("The workshop is in Mumbai on 2 June 2026.")
     document.save(path)
     created = _post(
-        client,
+        member,
         "note.docx",
         path.read_bytes(),
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
     document_id = created.json()["id"]
-    answer = client.post(f"/api/documents/{document_id}/questions", json={"question": "Where is the workshop?"})
+    answer = member.post(f"/api/documents/{document_id}/questions", json={"question": "Where is the workshop?"})
     assert answer.status_code == 503
     assert answer.json()["detail"] == MISSING_DOCUMENT_KEY
-    stored = client.get(f"/api/documents/{document_id}")
+    stored = member.get(f"/api/documents/{document_id}")
     assert stored.json()["questions"] == []
 
 
@@ -182,7 +182,7 @@ def test_schema_valid_narrative_is_saved_without_calling_gemini(isolated):
     secret = "test-key-not-real"
     settings.gemini_api_key = secret
     fake = _Client(NARRATIVE)
-    result = analyze_upload(CSV, filename="posts.csv", content_type="text/csv", client=fake)
+    result = analyze_upload(CSV, filename="posts.csv", content_type="text/csv", user_id="test-user", client=fake)
     assert result.narrative_status == "generated"
     assert result.summary is not None
     assert "5.0" in result.summary

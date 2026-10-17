@@ -2,7 +2,9 @@
 
 import asyncio
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+
+from app.api.auth_routes import current_user
 
 from app.core.config import settings
 from app.schemas.documents import DocumentAnalysisResponse, DocumentListResponse, QuestionRequest
@@ -14,21 +16,22 @@ router = APIRouter()
 
 
 @router.get("/documents", response_model=DocumentListResponse, tags=["documents"])
-def documents() -> DocumentListResponse:
-    items = list_documents()
+def documents(request: Request) -> DocumentListResponse:
+    items = list_documents(current_user(request).id)
     return DocumentListResponse(count=len(items), documents=items)
 
 
 @router.get("/documents/{document_id}", response_model=DocumentAnalysisResponse, tags=["documents"])
-def document_detail(document_id: str) -> DocumentAnalysisResponse:
-    record = get_document(document_id)
+def document_detail(document_id: str, request: Request) -> DocumentAnalysisResponse:
+    record = get_document(document_id, current_user(request).id)
     if record is None:
         raise HTTPException(status_code=404, detail="That saved analysis was not found.")
     return record
 
 
 @router.post("/documents", response_model=DocumentAnalysisResponse, tags=["documents"])
-async def create_document(file: UploadFile = File(...)) -> DocumentAnalysisResponse:
+async def create_document(request: Request, file: UploadFile = File(...)) -> DocumentAnalysisResponse:
+    user_id = current_user(request).id
     try:
         raw = await _read_bounded(file, settings.max_document_bytes)
         return await asyncio.to_thread(
@@ -36,15 +39,17 @@ async def create_document(file: UploadFile = File(...)) -> DocumentAnalysisRespo
             raw,
             filename=file.filename or "",
             content_type=file.content_type,
+            user_id=user_id,
         )
     except DocumentProcessError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @router.post("/documents/{document_id}/questions", response_model=DocumentAnalysisResponse, tags=["documents"])
-async def ask_document(document_id: str, body: QuestionRequest) -> DocumentAnalysisResponse:
+async def ask_document(document_id: str, body: QuestionRequest, request: Request) -> DocumentAnalysisResponse:
+    user_id = current_user(request).id
     try:
-        return await asyncio.to_thread(answer_question, document_id, body.question)
+        return await asyncio.to_thread(answer_question, document_id, body.question, user_id=user_id)
     except DocumentProcessError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 

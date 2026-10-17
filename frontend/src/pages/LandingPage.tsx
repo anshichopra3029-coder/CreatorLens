@@ -46,10 +46,12 @@ export function LandingPage() {
             <a href="#how-it-works" className="hover:text-slate-900">How it works</a>
             <Link to="/dashboard" className="hover:text-slate-900">Dashboard</Link>
           </nav>
-          <Link to="/dashboard" className="btn-primary">
-            <span className="sm:hidden">Dashboard</span>
-            <span className="hidden sm:inline">Explore Dashboard</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/dashboard" className="btn-primary">
+              <span className="sm:hidden">Dashboard</span>
+              <span className="hidden sm:inline">Explore Dashboard</span>
+            </Link>
+          </div>
         </div>
       </header>
 

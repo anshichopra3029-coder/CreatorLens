@@ -8,6 +8,8 @@ Video analysis is a separate route and calls Gemini only when configured.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.analytics_routes import router as analytics_router
+from app.api.auth_routes import router as auth_router
 from app.api.document_routes import router as document_router
 from app.api.youtube_routes import router as youtube_router
 from app.api.routes import router
@@ -23,15 +25,17 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Accept"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Accept", "X-CSRF-Token"],
 )
 
+app.include_router(auth_router, prefix="/api")
 app.include_router(router, prefix="/api")
 app.include_router(video_router, prefix="/api")
 app.include_router(document_router, prefix="/api")
 app.include_router(youtube_router, prefix="/api")
+app.include_router(analytics_router, prefix="/api")
 
 
 @app.get("/", tags=["health"])
@@ -42,5 +46,6 @@ def service_index() -> dict[str, str]:
         "ai_status": "/api/ai/status",
         "documents": "/api/documents",
         "youtube": "/api/youtube/analyses",
+        "analytics_csv": "/api/analytics/analyses",
         "docs": "/docs",
     }

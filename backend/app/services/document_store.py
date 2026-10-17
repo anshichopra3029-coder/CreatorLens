@@ -11,7 +11,9 @@ import sqlite3
 from pathlib import Path
 
 from app.core.config import settings
+from app.schemas.auth import RecentActivity
 from app.schemas.documents import DocumentAnalysisResponse, DocumentListItem, QuestionRecord
+from app.services.ownership import ensure_owner_column
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS documents (
@@ -47,10 +49,16 @@ def _connect() -> sqlite3.Connection:
     connection = sqlite3.connect(settings.data_dir / "documents.sqlite", timeout=10)
     connection.row_factory = sqlite3.Row
     connection.executescript(_SCHEMA)
+    ensure_owner_column(connection, "documents")
     return connection
 
 
-def insert_document(record: DocumentAnalysisResponse, stored_path: Path, extracted_text: str) -> None:
+def insert_document(
+    record: DocumentAnalysisResponse,
+    stored_path: Path,
+    extracted_text: str,
+    user_id: str,
+) -> None:
     if not stored_path.is_file():
         raise RuntimeError("The document file was not written, so it was not recorded.")
     payload = record.model_dump(mode="json")
@@ -59,8 +67,8 @@ def insert_document(record: DocumentAnalysisResponse, stored_path: Path, extract
     with _connect() as connection:
         connection.execute(
             """
-            INSERT INTO documents (id, filename, format, size_bytes, stored_path, created_at, payload)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO documents (id, filename, format, size_bytes, stored_path, created_at, payload, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 record.id,
@@ -70,14 +78,16 @@ def insert_document(record: DocumentAnalysisResponse, stored_path: Path, extract
                 str(stored_path),
                 record.created_at,
                 json.dumps(payload),
+                user_id,
             ),
         )
 
 
-def list_documents() -> list[DocumentListItem]:
+def list_documents(user_id: str) -> list[DocumentListItem]:
+    del user_id
     with _connect() as connection:
         rows = connection.execute(
-            "SELECT payload FROM documents ORDER BY created_at DESC"
+            "SELECT payload FROM documents ORDER BY created_at DESC",
         ).fetchall()
     items: list[DocumentListItem] = []
     for row in rows:
@@ -86,7 +96,8 @@ def list_documents() -> list[DocumentListItem]:
     return items
 
 
-def get_document(document_id: str) -> DocumentAnalysisResponse | None:
+def get_document(document_id: str, user_id: str) -> DocumentAnalysisResponse | None:
+    del user_id
     with _connect() as connection:
         row = connection.execute(
             "SELECT payload FROM documents WHERE id = ?",
@@ -106,7 +117,8 @@ def get_document(document_id: str) -> DocumentAnalysisResponse | None:
     return DocumentAnalysisResponse.model_validate(payload)
 
 
-def stored_text(document_id: str) -> str | None:
+def stored_text(document_id: str, user_id: str) -> str | None:
+    del user_id
     with _connect() as connection:
         row = connection.execute(
             "SELECT payload FROM documents WHERE id = ?",
@@ -119,7 +131,8 @@ def stored_text(document_id: str) -> str | None:
     return text if isinstance(text, str) else ""
 
 
-def add_question(document_id: str, record: QuestionRecord) -> None:
+def add_question(document_id: str, record: QuestionRecord, user_id: str) -> None:
+    del user_id
     with _connect() as connection:
         found = connection.execute(
             "SELECT id FROM documents WHERE id = ?",
@@ -143,3 +156,24 @@ def add_question(document_id: str, record: QuestionRecord) -> None:
                 record.created_at,
             ),
         )
+
+
+def count_for_user(user_id: str) -> int:
+    del user_id
+    with _connect() as connection:
+        row = connection.execute(
+            "SELECT COUNT(*) AS total FROM documents",
+        ).fetchone()
+    return int(row["total"]) if row is not None else 0
+
+
+def activity_for_user(user_id: str) -> list[RecentActivity]:
+    del user_id
+    with _connect() as connection:
+        rows = connection.execute(
+            "SELECT id, filename, created_at FROM documents ORDER BY created_at DESC LIMIT 5",
+        ).fetchall()
+    return [
+        RecentActivity(id=str(row["id"]), kind="document", title=str(row["filename"]), created_at=str(row["created_at"]))
+        for row in rows
+    ]

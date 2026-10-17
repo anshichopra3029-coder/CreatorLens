@@ -2,14 +2,19 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  Legend,
   Line,
   LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import { formatNumber, formatRate } from "../../services/format.ts";
+import type { ForecastPoint } from "../../types/prediction.ts";
 import type { AnalyticsAvailability, PublicStatistics, YoutubeListItem } from "../../types/youtube.ts";
 
 function UnavailableChart({ title, body }: { title: string; body: string }) {
@@ -21,28 +26,43 @@ function UnavailableChart({ title, body }: { title: string; body: string }) {
   );
 }
 
-export function EngagementCountsChart({ statistics }: { statistics: PublicStatistics }) {
+export function EngagementCountsChart({
+  statistics,
+  shares,
+}: {
+  statistics: PublicStatistics;
+  shares?: number | null;
+}) {
   const rows = [
-    statistics.likes_available && statistics.likes !== null ? { name: "Likes", value: statistics.likes } : null,
-    statistics.comments_available && statistics.comments !== null
+    statistics.views_available && statistics.views !== null && statistics.views > 0
+      ? { name: "Views", value: statistics.views }
+      : null,
+    statistics.likes_available && statistics.likes !== null && statistics.likes > 0
+      ? { name: "Likes", value: statistics.likes }
+      : null,
+    statistics.comments_available && statistics.comments !== null && statistics.comments > 0
       ? { name: "Comments", value: statistics.comments }
       : null,
+    shares !== undefined && shares !== null ? { name: "Shares", value: shares } : null,
   ].filter((row): row is { name: string; value: number } => row !== null);
 
   if (rows.length === 0) {
     return (
       <UnavailableChart
-        title="Public likes and comments"
-        body="Likes and comments are not in the public statistics for this video. Views, when present, stay on the summary cards because they use a different scale."
+        title="Views, likes, and comments"
+        body="Those counts were not available, so this comparison is empty."
       />
     );
   }
+  const logScale = rows.every((row) => row.value > 0) && rows.length > 1;
 
   return (
     <section className="card p-5">
-      <h2 className="text-base font-semibold">Public likes and comments</h2>
+      <h2 className="text-base font-semibold">Views, likes, and comments</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Counts returned by the YouTube Data API. Views stay on the summary cards because they use a different scale.
+        {logScale
+          ? "The axis uses a log scale because views are usually much larger than likes and comments. Tooltip values are the exact counts."
+          : "Exact public or uploaded counts. A missing count is omitted rather than drawn as zero."}
       </p>
       <div className="mt-4 h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -50,18 +70,116 @@ export function EngagementCountsChart({ statistics }: { statistics: PublicStatis
             <CartesianGrid stroke="#e2e8f0" vertical={false} />
             <XAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
             <YAxis
+              scale={logScale ? "log" : "auto"}
+              domain={logScale ? ["auto", "auto"] : [0, "auto"]}
               tick={{ fill: "#64748b", fontSize: 12 }}
               axisLine={false}
               tickLine={false}
-              width={56}
+              width={64}
               allowDecimals={false}
               tickFormatter={(value: number) => formatNumber(value)}
             />
             <Tooltip formatter={(value) => [formatNumber(typeof value === "number" ? value : 0), "Count"]} />
+            <Legend />
             <Bar dataKey="value" name="Count" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={72} />
           </BarChart>
         </ResponsiveContainer>
       </div>
+    </section>
+  );
+}
+
+const SLICE_COLORS = ["#4f46e5", "#0f766e", "#b45309"];
+
+export function InteractionDonut({
+  likes,
+  comments,
+  shares,
+}: {
+  likes: number | null;
+  comments: number | null;
+  shares?: number | null;
+}) {
+  const slices = [
+    likes !== null ? { name: "Likes", value: likes } : null,
+    comments !== null ? { name: "Comments", value: comments } : null,
+    shares !== undefined && shares !== null ? { name: "Shares", value: shares } : null,
+  ].filter((slice): slice is { name: string; value: number } => slice !== null && slice.value > 0);
+  if (slices.length < 2) {
+    return (
+      <UnavailableChart
+        title="Interaction mix"
+        body="A mix chart needs at least two positive interaction counts, such as likes and comments. Missing counts are not drawn as zero."
+      />
+    );
+  }
+  return (
+    <section className="card p-5">
+      <h2 className="text-base font-semibold">Interaction mix</h2>
+      <p className="mt-2 text-sm text-slate-600">
+        Share of the available interaction counts. Views are excluded because they are not an interaction.
+      </p>
+      <div className="mt-4 h-64 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={slices} dataKey="value" nameKey="name" innerRadius={58} outerRadius={84} paddingAngle={2}>
+              {slices.map((slice, index) => (
+                <Cell key={slice.name} fill={SLICE_COLORS[index % SLICE_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(value) => [formatNumber(typeof value === "number" ? value : 0), "Count"]} />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
+  );
+}
+
+export function ForecastChart({
+  eligible,
+  message,
+  limitations,
+  series,
+  method,
+}: {
+  eligible: boolean;
+  message: string;
+  limitations: string;
+  series: ForecastPoint[];
+  method: string | null;
+}) {
+  if (!eligible || series.length === 0) {
+    return <UnavailableChart title="View forecast" body={message} />;
+  }
+  return (
+    <section className="card p-5">
+      <h2 className="text-base font-semibold">View forecast</h2>
+      <p className="mt-2 text-sm text-slate-600">
+        {message} Method: {method ?? "not recorded"}. The solid line is observed. The dashed line is predicted.
+      </p>
+      <div className="mt-4 h-72 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid stroke="#e2e8f0" vertical={false} />
+            <XAxis dataKey="observed_at" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis
+              tick={{ fill: "#64748b", fontSize: 12 }}
+              axisLine={false}
+              tickLine={false}
+              width={64}
+              tickFormatter={(value: number) => formatNumber(value)}
+            />
+            <Tooltip formatter={(value) => [formatNumber(typeof value === "number" ? value : 0), "Views"]} />
+            <Legend />
+            <Line type="monotone" dataKey="views" name="Observed views" stroke="#4f46e5" strokeWidth={2} dot={false} connectNulls={false} />
+            <Line type="monotone" dataKey="predicted" name="Predicted views" stroke="#b45309" strokeDasharray="6 4" strokeWidth={2} dot={false} connectNulls />
+            <Line type="monotone" dataKey="lower" name="Lower interval" stroke="#94a3b8" strokeDasharray="2 4" dot={false} connectNulls />
+            <Line type="monotone" dataKey="upper" name="Upper interval" stroke="#94a3b8" strokeDasharray="2 4" dot={false} connectNulls />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <p className="mt-3 text-xs leading-5 text-slate-500">{limitations}</p>
     </section>
   );
 }
@@ -144,7 +262,7 @@ export function SnapshotTrendChart({
     return (
       <UnavailableChart
         title="Saved view snapshots"
-        body="Insufficient data. The Data API returns the current public totals, not a view history. A trend appears only after this video is analysed again and a second snapshot is saved."
+        body="Insufficient data. A public URL returns the current totals, not a view history. A trend appears only after this video is analysed again and a second snapshot is saved."
       />
     );
   }
