@@ -66,14 +66,14 @@ export function AppShell() {
   }, [menuOpen]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen text-[#16182B]">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-white focus:px-3 focus:py-2"
       >
         Skip to content
       </a>
-      <div className="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <div className="lg:grid lg:grid-cols-[18.5rem_minmax(0,1fr)]">
         <Sidebar open={menuOpen} onClose={() => setMenuOpen(false)} />
         <div className="min-w-0">
           <TopBar title={title} badge={badge} menuOpen={menuOpen} onMenu={() => setMenuOpen(true)} />

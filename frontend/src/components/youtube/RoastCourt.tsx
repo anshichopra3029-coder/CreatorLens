@@ -11,15 +11,15 @@ import type { RoastClaimKind, RoastStyle, VideoRoast } from "../../types/roast.t
 import type { YoutubeAnalysis } from "../../types/youtube.ts";
 
 const STYLES: { id: RoastStyle; label: string; detail: string }[] = [
-  { id: "friendly", label: "Friendly Tease", detail: "A light opening, then the actual finding." },
-  { id: "savage", label: "Savage Mode", detail: "Sharper wording, same evidence." },
-  { id: "brutal", label: "Brutal Honesty", detail: "The diagnosis, without a costume." },
+  { id: "friendly", label: "Friendly Tease", detail: "Light, playful jokes, then the real takeaways." },
+  { id: "savage", label: "Savage Mode", detail: "Sharper jokes, same honest numbers." },
+  { id: "brutal", label: "Brutal Honesty", detail: "Straight talk about the numbers, no sugar-coating." },
 ];
 
 const CLAIM_LABEL: Record<RoastClaimKind, string> = {
-  observed: "Observed fact",
-  inference: "Inference",
-  hypothesis: "Hypothesis",
+  observed: "Fact from your numbers",
+  inference: "Likely, based on a comparison",
+  hypothesis: "Possible reason (a guess)",
 };
 
 export function RoastCourt({
@@ -58,7 +58,7 @@ export function RoastCourt({
       setFollowUp(next.experiment?.follow_up_views == null ? "" : String(next.experiment.follow_up_views));
       setCompleted(next.experiment?.completed_task ?? false);
     } catch (caught: unknown) {
-      setError(caught instanceof Error ? caught.message : "The roast request failed.");
+      setError(caught instanceof Error ? caught.message : "The roast didn't work this time. Please try again.");
     } finally {
       setBusy(null);
     }
@@ -71,7 +71,8 @@ export function RoastCourt({
           <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Roast My Video</p>
           <h2 className="mt-1 text-lg font-semibold">We'll roast your content. Then help you fix it.</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
-            The roast can joke. The investigation, X-ray, and court use this video's saved diagnosis and do not invent missing metrics.
+            The roast is just for fun. Everything after the jokes sticks to this video's real saved numbers and never makes
+            up missing ones.
           </p>
         </div>
         <button type="button" className="btn-primary" onClick={() => setOpen(true)} disabled={open}>
@@ -147,7 +148,7 @@ export function RoastCourt({
               onSaveResult={() => {
                 const parsed = followUp.trim() === "" ? null : Number(followUp);
                 if (parsed !== null && (!Number.isInteger(parsed) || parsed < 0)) {
-                  setError("Follow-up views need a whole number, or leave the field empty.");
+                  setError("Please enter the later view count as a whole number, or leave it empty.");
                   return;
                 }
                 void run("result", () =>
@@ -224,7 +225,7 @@ function RoastBody({
       <article className="rounded-xl border border-slate-800 bg-slate-900 p-5 text-slate-100">
         <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">
           {styleLabel(roast.style)} · take {roast.take}
-          {roast.source === "gemini" ? " · roast written by Gemini" : " · written from the saved counts"}
+          {roast.source === "gemini" ? " · jokes written by AI" : " · written from your saved numbers"}
         </p>
         <p className="mt-3 text-lg font-semibold leading-7">{roast.opening}</p>
         {roast.bits && roast.bits.length > 0 ? (
@@ -255,10 +256,10 @@ function RoastBody({
           {explain ? "Hide the explanation" : "Explain the Roast"}
         </button>
         <button type="button" className="btn-secondary" onClick={onEvidence}>
-          Show the Evidence
+          Show the Numbers Behind It
         </button>
         <button type="button" className="btn-secondary" onClick={onChallenge}>
-          Challenge This Verdict
+          I Disagree
         </button>
         <button type="button" className="btn-secondary" onClick={onFix} disabled={busy === "fix"}>
           {busy === "fix" ? "Writing a fix…" : "Give Me a Fix"}
@@ -270,13 +271,13 @@ function RoastBody({
 
       {showEvidence ? (
         <section className="rounded-xl border border-indigo-200 bg-indigo-50 p-4" id="roast-evidence">
-          <h3 className="text-sm font-semibold text-indigo-950">Evidence behind the roast</h3>
+          <h3 className="text-sm font-semibold text-indigo-950">The numbers behind the roast</h3>
           <ul className="mt-3 space-y-3">
             {roast.clues.map((clue) => (
               <li key={clue.label} className="text-sm leading-6 text-indigo-950">
                 <p className="font-medium">{clue.label}</p>
                 <p>{clue.detail}</p>
-                <p className="text-xs uppercase tracking-wide text-indigo-700">Source: {clue.source}</p>
+                <p className="text-xs uppercase tracking-wide text-indigo-700">From: {clue.source}</p>
               </li>
             ))}
           </ul>
@@ -293,12 +294,12 @@ function RoastBody({
             }
           }}
         >
-          <h3 className="text-sm font-semibold">Question the verdict</h3>
+          <h3 className="text-sm font-semibold">Tell us what we missed</h3>
           <p className="mt-1 text-sm text-slate-600">
-            Add what the saved counts cannot see. The reply reassesses the claim instead of defending it.
+            Share anything the numbers can't show. We'll take another honest look instead of just defending the verdict.
           </p>
           <label className="field-label mt-3" htmlFor="roast-question">
-            What should be reconsidered?
+            What do you disagree with?
           </label>
           <textarea
             id="roast-question"
@@ -308,7 +309,7 @@ function RoastBody({
             onChange={(event) => onQuestion(event.target.value)}
           />
           <label className="field-label mt-3" htmlFor="roast-context">
-            Extra context, optional
+            Anything else we should know? (optional)
           </label>
           <textarea
             id="roast-context"
@@ -318,7 +319,7 @@ function RoastBody({
             onChange={(event) => onContext(event.target.value)}
           />
           <button type="submit" className="btn-primary mt-3" disabled={busy === "challenge" || question.trim() === ""}>
-            {busy === "challenge" ? "Reassessing…" : "Reassess the verdict"}
+            {busy === "challenge" ? "Taking another look…" : "Take another look"}
           </button>
           {roast.challenge ? (
             <p className="mt-3 text-sm leading-6 text-slate-700">{roast.challenge.reply}</p>
@@ -330,19 +331,19 @@ function RoastBody({
         <section className="rounded-xl border border-slate-200 p-4">
           <h3 className="text-sm font-semibold">A practical fix</h3>
           <p className="mt-2 text-sm leading-6 text-slate-600">{roast.fixes.note}</p>
-          <h4 className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Title drafts</h4>
+          <h4 className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Title ideas</h4>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
             {roast.fixes.titles.map((title) => (
               <li key={title}>{title}</li>
             ))}
           </ul>
-          <h4 className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Thumbnail concepts</h4>
+          <h4 className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Thumbnail ideas</h4>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
             {roast.fixes.thumbnail_concepts.map((concept) => (
               <li key={concept}>{concept}</li>
             ))}
           </ul>
-          <h4 className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Opening hooks</h4>
+          <h4 className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Opening lines</h4>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-800">
             {roast.fixes.hooks.map((hook) => (
               <li key={hook}>{hook}</li>
@@ -352,14 +353,14 @@ function RoastBody({
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <CourtList title="The clues" items={roast.clues.map((clue) => ({
+        <CourtList title="The clues (what we know)" items={roast.clues.map((clue) => ({
           title: clue.label,
           detail: clue.detail,
           evidence: clue.source,
           claim_kind: clue.claim_kind,
         }))} />
         <CourtList
-          title="The defence"
+          title="The defence (what's going well)"
           items={roast.defence.map((point) => ({
             title: point.title,
             detail: point.detail,
@@ -368,7 +369,7 @@ function RoastBody({
           }))}
         />
         <CourtList
-          title="The suspects"
+          title="The suspects (possible problems)"
           items={roast.suspects.map((point) => ({
             title: point.title,
             detail: point.detail,
@@ -393,14 +394,15 @@ function RoastBody({
       </div>
 
       <section className="rounded-xl border border-slate-200 p-4">
-        <h3 className="text-sm font-semibold">Next move</h3>
+        <h3 className="text-sm font-semibold">Your next move</h3>
         <p className="mt-2 text-sm leading-6 text-slate-800">{roast.next_move.change}</p>
         <p className="mt-2 text-sm leading-6 text-slate-600">{roast.next_move.why}</p>
         <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Metric to monitor: {roast.next_move.metric}
+          What to watch: {roast.next_move.metric}
         </p>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Saving or finishing this task does not show that the video improved. A later view count is a record, not proof of cause.
+          Doing this task doesn't by itself mean the video got better. A later view count is a useful record, but it
+          doesn't prove what caused a change.
         </p>
         {experiment ? (
           <form
@@ -410,11 +412,11 @@ function RoastBody({
               onSaveResult();
             }}
           >
-            <p className="text-sm font-medium">Saved experiment · {experiment.created_at}</p>
+            <p className="text-sm font-medium">Your saved plan · {experiment.created_at}</p>
             <p className="text-sm leading-6 text-slate-700">{experiment.proposed_change}</p>
-            <p className="text-xs text-slate-500">Watch: {experiment.metric}</p>
+            <p className="text-xs text-slate-500">What to watch: {experiment.metric}</p>
             <label className="field-label" htmlFor="experiment-note">
-              Follow-up note
+              How did it go? (notes)
             </label>
             <textarea
               id="experiment-note"
@@ -424,7 +426,7 @@ function RoastBody({
               onChange={(event) => onOutcome(event.target.value)}
             />
             <label className="field-label" htmlFor="experiment-views">
-              Later public view count, optional
+              View count now (optional)
             </label>
             <input
               id="experiment-views"
@@ -442,13 +444,13 @@ function RoastBody({
               I did this task
             </label>
             <button type="submit" className="btn-secondary" disabled={busy === "result"}>
-              {busy === "result" ? "Saving the note…" : "Save follow-up"}
+              {busy === "result" ? "Saving…" : "Save my update"}
             </button>
             <p className="text-sm leading-6 text-slate-600">{experiment.result_note}</p>
           </form>
         ) : (
           <button type="button" className="btn-primary mt-4" onClick={onSaveExperiment} disabled={busy === "experiment"}>
-            {busy === "experiment" ? "Saving the experiment…" : "Save this as my one move"}
+            {busy === "experiment" ? "Saving…" : "Save this as my next move"}
           </button>
         )}
       </section>
@@ -467,7 +469,7 @@ function CourtList({
     <section className="rounded-xl border border-slate-200 p-4">
       <h3 className="text-sm font-semibold">{title}</h3>
       {items.length === 0 ? (
-        <p className="mt-3 text-sm text-slate-600">Nothing in the saved data supports an item here.</p>
+        <p className="mt-3 text-sm text-slate-600">Nothing to add here based on the saved numbers.</p>
       ) : (
         <ul className="mt-3 space-y-3">
           {items.map((item) => (
@@ -487,13 +489,13 @@ function CourtList({
 function DetectiveMascot() {
   return (
     <svg viewBox="0 0 80 80" className="detective-bob h-16 w-16 shrink-0" role="img" aria-label="Detective mascot">
-      <circle cx="40" cy="34" r="16" fill="#e2e8f0" stroke="#312e81" strokeWidth="2" />
-      <path d="M24 28c4-10 28-10 32 0v4H24z" fill="#312e81" />
-      <circle cx="34" cy="34" r="2" fill="#312e81" />
-      <circle cx="46" cy="34" r="2" fill="#312e81" />
-      <path d="M34 42c4 3 8 3 12 0" fill="none" stroke="#312e81" strokeWidth="1.5" />
-      <circle cx="58" cy="52" r="9" fill="#eef2ff" stroke="#4f46e5" strokeWidth="3" />
-      <path d="M64 58l8 8" stroke="#4f46e5" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="40" cy="34" r="16" fill="#E4E2EE" stroke="#2916E1" strokeWidth="2" />
+      <path d="M24 28c4-10 28-10 32 0v4H24z" fill="#2916E1" />
+      <circle cx="34" cy="34" r="2" fill="#2916E1" />
+      <circle cx="46" cy="34" r="2" fill="#2916E1" />
+      <path d="M34 42c4 3 8 3 12 0" fill="none" stroke="#2916E1" strokeWidth="1.5" />
+      <circle cx="58" cy="52" r="9" fill="#F3F0FF" stroke="#5848D2" strokeWidth="3" />
+      <path d="M64 58l8 8" stroke="#5848D2" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }
@@ -515,7 +517,7 @@ function Investigation({ lines }: { lines: string[] }) {
     <section className="flex gap-4 rounded-xl border border-indigo-100 bg-indigo-50 p-4" aria-label="Investigation">
       <DetectiveMascot />
       <div>
-        <h3 className="text-sm font-semibold text-indigo-950">The investigation</h3>
+        <h3 className="text-sm font-semibold text-indigo-950">Looking into it</h3>
         <ol className="mt-2 space-y-2 text-sm leading-6 text-indigo-950">
           {lines.slice(0, shown).map((line) => (
             <li key={line}>{line}</li>
@@ -536,16 +538,16 @@ function PerformanceXRay({ analysis }: { analysis: YoutubeAnalysis }) {
   const likeShare = views !== null && likes !== null && views > 0 ? (likes / views) * 100 : null;
   const commentShare = views !== null && comments !== null && views > 0 ? (comments / views) * 100 : null;
   const rows: { label: string; present: boolean }[] = [
-    { label: "Discovery impressions", present: analysis.analytics.impressions !== null },
-    { label: "Click-through rate", present: analysis.analytics.click_through_rate !== null },
-    { label: "Audience retention", present: analysis.analytics.audience_retention !== null },
+    { label: "Impressions (how often YouTube showed it)", present: analysis.analytics.impressions !== null },
+    { label: "Click-through rate (how often people clicked)", present: analysis.analytics.click_through_rate !== null },
+    { label: "Audience retention (how long people watched)", present: analysis.analytics.audience_retention !== null },
   ];
 
   return (
     <section className="rounded-xl border border-slate-200 p-4" aria-label="Performance X-Ray">
       <h3 className="text-sm font-semibold">Performance X-Ray</h3>
       <p className="mt-1 text-sm leading-6 text-slate-600">
-        {evidence?.evidence_level ?? "Limited evidence"}. These figures are the saved counts for this video.
+        {evidence?.evidence_level ?? "Limited evidence"}. These are the saved numbers for this video.
       </p>
       <dl className="mt-4 grid gap-3 sm:grid-cols-3">
         <div>
@@ -567,21 +569,22 @@ function PerformanceXRay({ analysis }: { analysis: YoutubeAnalysis }) {
           <ShareBar label="Comments per 100 views" value={commentShare} />
         </div>
       ) : (
-        <p className="mt-3 text-sm text-slate-600">A likes or comments share was not drawn because a required count is missing.</p>
+        <p className="mt-3 text-sm text-slate-600">We couldn't draw these bars because a like or comment count is missing.</p>
       )}
       <p className="mt-4 text-sm leading-6 text-slate-700">
-        {evidence?.baseline_label || "No other saved videos from this account form a creator median."}
+        {evidence?.baseline_label || "Not enough of your other videos are saved yet to compare with."}
       </p>
       {rate !== null ? (
         <p className="mt-2 text-sm text-slate-700">
-          Engagement rate {rate.toFixed(2)}% using {evidence?.engagement_formula ?? stats.engagement_formula}.
+          Engagement rate: {rate.toFixed(2)}% (likes and comments compared with views:{" "}
+          {evidence?.engagement_formula ?? stats.engagement_formula}).
         </p>
       ) : null}
       <ul className="mt-4 space-y-2 text-sm">
         {rows.map((row) => (
           <li key={row.label} className="flex justify-between gap-3 border-t border-slate-100 pt-2">
             <span>{row.label}</span>
-            <span className="text-slate-500">{row.present ? "Supplied in this file" : "Not in this snapshot"}</span>
+            <span className="text-slate-500">{row.present ? "Included" : "Not available"}</span>
           </li>
         ))}
       </ul>
@@ -616,7 +619,7 @@ function RoastSkeleton() {
     <div className="space-y-3" aria-busy="true" aria-label="Writing the roast">
       <div className="flex items-center gap-3">
         <DetectiveMascot />
-        <p className="text-sm text-slate-600">Opening the saved snapshot and the diagnosis…</p>
+        <p className="text-sm text-slate-600">Looking at your saved numbers…</p>
       </div>
       <div className="h-24 animate-pulse rounded-xl bg-slate-200" />
       <div className="grid gap-3 sm:grid-cols-2">
@@ -625,7 +628,7 @@ function RoastSkeleton() {
       </div>
       <p className="flex items-center gap-2 text-sm text-slate-600">
         <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-        Reading the saved counts…
+        Writing the jokes…
       </p>
     </div>
   );

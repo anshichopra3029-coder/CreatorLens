@@ -2,9 +2,19 @@
 
 import asyncio
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from app.api.auth_routes import current_user
+from app.core.config import settings
+from app.schemas.prediction import ObservationImportResult, TrackedVideoList, VideoForecastResponse
+from app.services.upload_service import describe_byte_limit
+from app.services.view_history import (
+    ViewHistoryError,
+    import_observations,
+    list_tracked,
+    record_snapshot,
+    video_forecast,
+)
 
 from app.schemas.roast import ChallengeRequest, ExperimentUpdate, RoastRequest
 from app.schemas.youtube import (
@@ -114,6 +124,44 @@ async def youtube_update_experiment(analysis_id: str, body: ExperimentUpdate, re
             completed_task=body.completed_task,
         )
     except RoastError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.get("/youtube/videos", response_model=TrackedVideoList, tags=["forecast"])
+async def tracked_youtube_videos(request: Request) -> TrackedVideoList:
+    items = await asyncio.to_thread(list_tracked, current_user(request).id)
+    return TrackedVideoList(count=len(items), videos=items)
+
+
+@router.get("/youtube/videos/{video_id}/forecast", response_model=VideoForecastResponse, tags=["forecast"])
+async def youtube_video_forecast(video_id: str, request: Request) -> VideoForecastResponse:
+    user_id = current_user(request).id
+    try:
+        return await asyncio.to_thread(video_forecast, video_id, user_id)
+    except ViewHistoryError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.post("/youtube/videos/{video_id}/snapshot", response_model=VideoForecastResponse, tags=["forecast"])
+async def youtube_video_snapshot(video_id: str, request: Request) -> VideoForecastResponse:
+    user_id = current_user(request).id
+    try:
+        return await asyncio.to_thread(record_snapshot, video_id, user_id)
+    except ViewHistoryError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@router.post("/youtube/videos/{video_id}/observations", response_model=ObservationImportResult, tags=["forecast"])
+async def youtube_video_import(video_id: str, request: Request, file: UploadFile = File(...)) -> ObservationImportResult:
+    user_id = current_user(request).id
+    raw = await file.read(settings.max_upload_bytes + 1)
+    if len(raw) > settings.max_upload_bytes:
+        raise HTTPException(status_code=413, detail=f"The file is larger than the {describe_byte_limit(settings.max_upload_bytes)} upload limit.")
+    if not (file.filename or "").lower().endswith(".csv"):
+        raise HTTPException(status_code=415, detail="Upload a .csv file with observed_at and views columns.")
+    try:
+        return await asyncio.to_thread(import_observations, video_id, user_id, raw)
+    except ViewHistoryError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 

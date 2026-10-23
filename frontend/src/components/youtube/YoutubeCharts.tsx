@@ -50,7 +50,7 @@ export function EngagementCountsChart({
     return (
       <UnavailableChart
         title="Views, likes, and comments"
-        body="Those counts were not available, so this comparison is empty."
+        body="These counts weren't available, so there's nothing to compare."
       />
     );
   }
@@ -61,18 +61,18 @@ export function EngagementCountsChart({
       <h2 className="text-base font-semibold">Views, likes, and comments</h2>
       <p className="mt-2 text-sm text-slate-600">
         {logScale
-          ? "The axis uses a log scale because views are usually much larger than likes and comments. Tooltip values are the exact counts."
-          : "Exact public or uploaded counts. A missing count is omitted rather than drawn as zero."}
+          ? "Views are usually much bigger than likes and comments, so the scale is stretched (log scale) to fit them all. Hover a bar to see the exact count."
+          : "Exact counts. A missing count is left out instead of being shown as zero."}
       </p>
       <div className="mt-4 h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
+            <CartesianGrid stroke="#E4E2EE" vertical={false} />
+            <XAxis dataKey="name" tick={{ fill: "#4D535D", fontSize: 12 }} axisLine={false} tickLine={false} />
             <YAxis
               scale={logScale ? "log" : "auto"}
               domain={logScale ? ["auto", "auto"] : [0, "auto"]}
-              tick={{ fill: "#64748b", fontSize: 12 }}
+              tick={{ fill: "#4D535D", fontSize: 12 }}
               axisLine={false}
               tickLine={false}
               width={64}
@@ -81,7 +81,7 @@ export function EngagementCountsChart({
             />
             <Tooltip formatter={(value) => [formatNumber(typeof value === "number" ? value : 0), "Count"]} />
             <Legend />
-            <Bar dataKey="value" name="Count" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={72} />
+            <Bar dataKey="value" name="Count" fill="#5848D2" radius={[6, 6, 0, 0]} maxBarSize={72} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -89,7 +89,7 @@ export function EngagementCountsChart({
   );
 }
 
-const SLICE_COLORS = ["#4f46e5", "#0f766e", "#b45309"];
+const SLICE_COLORS = ["#5848D2", "#12B5A8", "#EF9620"];
 
 export function InteractionDonut({
   likes,
@@ -108,16 +108,16 @@ export function InteractionDonut({
   if (slices.length < 2) {
     return (
       <UnavailableChart
-        title="Interaction mix"
-        body="A mix chart needs at least two positive interaction counts, such as likes and comments. Missing counts are not drawn as zero."
+        title="Likes vs. comments"
+        body="This chart needs at least two kinds of interaction above zero, such as likes and comments. Missing counts aren't shown as zero."
       />
     );
   }
   return (
     <section className="card p-5">
-      <h2 className="text-base font-semibold">Interaction mix</h2>
+      <h2 className="text-base font-semibold">Likes vs. comments</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Share of the available interaction counts. Views are excluded because they are not an interaction.
+        How the reactions split up. Views aren't included, because watching isn't a reaction.
       </p>
       <div className="mt-4 h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -152,30 +152,54 @@ export function ForecastChart({
   if (!eligible || series.length === 0) {
     return <UnavailableChart title="View forecast" body={message} />;
   }
+  const rows = series
+    .map((point) => ({ ...point, t: Date.parse(point.observed_at) }))
+    .filter((point) => Number.isFinite(point.t))
+    .sort((first, second) => first.t - second.t);
+  const hasInterval = series.some((point) => point.lower !== null || point.upper !== null);
+  const formatTime = (value: number) =>
+    new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   return (
     <section className="card p-5">
       <h2 className="text-base font-semibold">View forecast</h2>
       <p className="mt-2 text-sm text-slate-600">
-        {message} Method: {method ?? "not recorded"}. The solid line is observed. The dashed line is predicted.
+        {message} The solid line with dots shows real recorded views. The dashed line shows the forecast. (Method: {method ?? "not recorded"}.)
       </p>
       <div className="mt-4 h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="observed_at" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis
-              tick={{ fill: "#64748b", fontSize: 12 }}
+          <LineChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid stroke="#E4E2EE" vertical={false} />
+            <XAxis
+              dataKey="t"
+              type="number"
+              scale="time"
+              domain={["dataMin", "dataMax"]}
+              tickFormatter={formatTime}
+              tick={{ fill: "#4D535D", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
-              width={64}
+            />
+            <YAxis
+              tick={{ fill: "#4D535D", fontSize: 12 }}
+              axisLine={false}
+              tickLine={false}
+              width={72}
+              domain={["auto", "auto"]}
               tickFormatter={(value: number) => formatNumber(value)}
             />
-            <Tooltip formatter={(value) => [formatNumber(typeof value === "number" ? value : 0), "Views"]} />
+            <Tooltip
+              labelFormatter={(value) => new Date(Number(value)).toLocaleString()}
+              formatter={(value, name) => [formatNumber(typeof value === "number" ? value : 0), String(name)]}
+            />
             <Legend />
-            <Line type="monotone" dataKey="views" name="Observed views" stroke="#4f46e5" strokeWidth={2} dot={false} connectNulls={false} />
-            <Line type="monotone" dataKey="predicted" name="Predicted views" stroke="#b45309" strokeDasharray="6 4" strokeWidth={2} dot={false} connectNulls />
-            <Line type="monotone" dataKey="lower" name="Lower interval" stroke="#94a3b8" strokeDasharray="2 4" dot={false} connectNulls />
-            <Line type="monotone" dataKey="upper" name="Upper interval" stroke="#94a3b8" strokeDasharray="2 4" dot={false} connectNulls />
+            <Line type="linear" dataKey="views" name="Recorded views" stroke="#5848D2" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+            <Line type="linear" dataKey="predicted" name="Predicted views" stroke="#EF9620" strokeDasharray="6 4" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+            {hasInterval ? (
+              <Line type="linear" dataKey="lower" name="Lower interval" stroke="#B6A9E0" strokeDasharray="2 4" dot={false} connectNulls />
+            ) : null}
+            {hasInterval ? (
+              <Line type="linear" dataKey="upper" name="Upper interval" stroke="#B6A9E0" strokeDasharray="2 4" dot={false} connectNulls />
+            ) : null}
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -201,7 +225,7 @@ export function CrossVideoEngagementChart({
     return (
       <UnavailableChart
         title="Engagement across saved videos"
-        body="Insufficient data. This comparison appears after at least two saved videos have public views, likes, and comments."
+        body="Not enough data yet. This comparison appears once at least two of your saved videos have public views, likes, and comments."
       />
     );
   }
@@ -209,15 +233,16 @@ export function CrossVideoEngagementChart({
     <section className="card p-5">
       <h2 className="text-base font-semibold">Engagement across saved videos</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Each bar is (likes + comments) / views × 100 from the public statistics saved with that analysis.
+        Each bar shows how many people liked or commented compared with how many viewed, for one of your saved videos.
+        (Worked out as likes plus comments, divided by views, × 100.)
       </p>
       <div className="mt-4 h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 48 }}>
-            <CartesianGrid stroke="#e2e8f0" vertical={false} />
+            <CartesianGrid stroke="#E4E2EE" vertical={false} />
             <XAxis
               dataKey="name"
-              tick={{ fill: "#64748b", fontSize: 11 }}
+              tick={{ fill: "#4D535D", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               interval={0}
@@ -226,14 +251,14 @@ export function CrossVideoEngagementChart({
               height={72}
             />
             <YAxis
-              tick={{ fill: "#64748b", fontSize: 12 }}
+              tick={{ fill: "#4D535D", fontSize: 12 }}
               axisLine={false}
               tickLine={false}
               width={48}
               tickFormatter={(value: number) => `${value}%`}
             />
             <Tooltip formatter={(value) => [formatRate(typeof value === "number" ? value : null), "Engagement rate"]} />
-            <Bar dataKey="rate" name="Engagement rate" fill="#0f766e" radius={[6, 6, 0, 0]} maxBarSize={48} />
+            <Bar dataKey="rate" name="Engagement rate" fill="#12B5A8" radius={[6, 6, 0, 0]} maxBarSize={48} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -262,7 +287,7 @@ export function SnapshotTrendChart({
     return (
       <UnavailableChart
         title="Saved view snapshots"
-        body="Insufficient data. A public URL returns the current totals, not a view history. A trend appears only after this video is analysed again and a second snapshot is saved."
+        body="Not enough data yet. A YouTube link only gives today's totals, not past views. A trend line appears after you analyse this video again and a second snapshot is saved."
       />
     );
   }
@@ -270,15 +295,15 @@ export function SnapshotTrendChart({
     <section className="card p-5">
       <h2 className="text-base font-semibold">Saved view snapshots</h2>
       <p className="mt-2 text-sm text-slate-600">
-        These points are public totals saved at each analysis. They are not a YouTube Analytics time series.
+        Each point is the public view total at the time you saved an analysis. It's not YouTube Studio's own history.
       </p>
       <div className="mt-4 h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+            <CartesianGrid stroke="#E4E2EE" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: "#4D535D", fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis
-              tick={{ fill: "#64748b", fontSize: 12 }}
+              tick={{ fill: "#4D535D", fontSize: 12 }}
               axisLine={false}
               tickLine={false}
               width={64}
@@ -286,7 +311,7 @@ export function SnapshotTrendChart({
               tickFormatter={(value: number) => formatNumber(value)}
             />
             <Tooltip formatter={(value) => [formatNumber(typeof value === "number" ? value : 0), "Views"]} />
-            <Line type="monotone" dataKey="views" name="Views" stroke="#4f46e5" strokeWidth={2} dot />
+            <Line type="monotone" dataKey="views" name="Views" stroke="#5848D2" strokeWidth={2} dot />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -300,7 +325,7 @@ export function RetentionChart({ analytics }: { analytics: AnalyticsAvailability
     return (
       <UnavailableChart
         title="Audience retention"
-        body={analytics.reason || "Audience retention is unavailable. No curve is shown."}
+        body={analytics.reason || "We don't have data on how long people kept watching, so no chart is shown."}
       />
     );
   }
@@ -308,15 +333,15 @@ export function RetentionChart({ analytics }: { analytics: AnalyticsAvailability
   return (
     <section className="card p-5">
       <h2 className="text-base font-semibold">Audience retention</h2>
-      <p className="mt-2 text-sm text-slate-600">Points returned by an authorized YouTube Analytics report for this video.</p>
+      <p className="mt-2 text-sm text-slate-600">How long people kept watching, from your connected YouTube Analytics.</p>
       <div className="mt-4 h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="#e2e8f0" vertical={false} />
-            <XAxis dataKey="point" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} width={48} />
+            <CartesianGrid stroke="#E4E2EE" vertical={false} />
+            <XAxis dataKey="point" tick={{ fill: "#4D535D", fontSize: 12 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: "#4D535D", fontSize: 12 }} axisLine={false} tickLine={false} width={48} />
             <Tooltip formatter={(value) => [typeof value === "number" ? value : "—", "Retention"]} />
-            <Line type="monotone" dataKey="retention" name="Retention" stroke="#b45309" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="retention" name="Retention" stroke="#EF9620" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>

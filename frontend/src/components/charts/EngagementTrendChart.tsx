@@ -27,8 +27,8 @@ export function EngagementTrendChart({ points, caption: captionOverride }: { poi
   const caption =
     captionOverride ??
     (peak
-      ? `Highest weekly average in this demo series is ${formatRate(peak.avg_engagement_rate)} in the week of ${peak.label}.`
-      : "No engagement rate is available for this series.");
+      ? `The best week in the demo data was the week of ${peak.label}, at ${formatRate(peak.avg_engagement_rate)}.`
+      : "There's no engagement to show for these weeks yet.");
 
   return (
     <figure>
@@ -36,15 +36,15 @@ export function EngagementTrendChart({ points, caption: captionOverride }: { poi
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="#e2e8f0" vertical={false} />
+            <CartesianGrid stroke="#E4E2EE" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: "#64748b", fontSize: 12 }}
+              tick={{ fill: "#4D535D", fontSize: 12 }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
-              tick={{ fill: "#64748b", fontSize: 12 }}
+              tick={{ fill: "#4D535D", fontSize: 12 }}
               axisLine={false}
               tickLine={false}
               width={48}
@@ -57,9 +57,9 @@ export function EngagementTrendChart({ points, caption: captionOverride }: { poi
               type="monotone"
               dataKey="avg_engagement_rate"
               name="Engagement rate"
-              stroke="#4f46e5"
+              stroke="#5848D2"
               strokeWidth={2}
-              dot={{ r: 3, fill: "#4f46e5" }}
+              dot={{ r: 3, fill: "#5848D2" }}
               connectNulls={false}
             />
           </LineChart>

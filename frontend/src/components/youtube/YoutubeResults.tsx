@@ -52,14 +52,14 @@ function EvidenceList({ title, items }: { title: string; items: EvidencePoint[] 
     <section className="card p-5">
       <h2 className="text-base font-semibold">{title}</h2>
       {items.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-600">None were recorded from the available sources.</p>
+        <p className="mt-2 text-sm text-slate-600">Nothing to show here from the information we had.</p>
       ) : (
         <ul className="mt-3 space-y-3">
           {items.map((item) => (
             <li key={`${item.source}-${item.claim}`} className="text-sm leading-6 text-slate-700">
               <p className="font-medium text-slate-900">{item.claim}</p>
               <p className="mt-1">{item.evidence}</p>
-              <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">Source: {item.source}</p>
+              <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">Based on: {item.source}</p>
             </li>
           ))}
         </ul>
@@ -80,9 +80,9 @@ function Scorecard({
   return (
     <article className="card p-5">
       <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-      <p className="mt-2 text-xs leading-5 text-slate-500">Criteria: {criteria}</p>
+      <p className="mt-2 text-xs leading-5 text-slate-500">What we looked for: {criteria}</p>
       <p className="mt-3 text-sm leading-6 text-slate-700">{finding}</p>
-      <p className="mt-2 text-xs text-slate-500">Gemini observation from the supplied text. This is not a measured score.</p>
+      <p className="mt-2 text-xs text-slate-500">AI's opinion based on the video's text. It's not a measured score.</p>
     </article>
   );
 }
@@ -94,41 +94,41 @@ function NarrativeSections({ narrative, model }: { narrative: YoutubeNarrative; 
         <h2 className="text-base font-semibold">Overview</h2>
         <p className="mt-3 text-sm leading-6 text-slate-700">{narrative.executive_summary}</p>
         <p className="mt-3 text-sm text-slate-700">
-          <span className="font-medium">Intended audience: </span>
+          <span className="font-medium">Who it's for: </span>
           {narrative.intended_audience}
         </p>
         <p className="mt-2 text-sm text-slate-700">
           <span className="font-medium">Main topic: </span>
           {narrative.main_topic}
         </p>
-        {model ? <p className="mt-3 text-xs text-slate-500">Written analysis model: {model}</p> : null}
+        {model ? <p className="mt-3 text-xs text-slate-500">Written by AI ({model})</p> : null}
       </section>
       <section className="grid gap-4 lg:grid-cols-2">
         <Scorecard
           title="Title"
-          criteria="Does the title name the subject a viewer would search for?"
+          criteria="Does the title say what the video is about, in words people would search for?"
           finding={narrative.title_assessment}
         />
         <Scorecard
           title="Description"
-          criteria="Does the description match the title and say what the video contains?"
+          criteria="Does the description match the title and say what's in the video?"
           finding={narrative.description_assessment}
         />
         <Scorecard
           title="Call to action"
-          criteria="Is there a specific next step, and does the supplied text support it?"
+          criteria="Does the video ask viewers to do something specific next, like comment or subscribe?"
           finding={narrative.cta_assessment}
         />
         <Scorecard
           title="Opening"
-          criteria="Assess the opening only from a transcript. Without one, do not describe the video."
+          criteria="How the first seconds grab attention. We can only judge this from the spoken words (transcript)."
           finding={narrative.hook_assessment}
         />
       </section>
       <section className="card p-5">
         <h2 className="text-base font-semibold">Topics and takeaways</h2>
         {narrative.subtopics.length > 0 ? (
-          <p className="mt-2 text-sm text-slate-700">Subtopics: {narrative.subtopics.join(", ")}</p>
+          <p className="mt-2 text-sm text-slate-700">Also covers: {narrative.subtopics.join(", ")}</p>
         ) : null}
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
           {narrative.key_takeaways.map((item) => (
@@ -144,18 +144,18 @@ function NarrativeSections({ narrative, model }: { narrative: YoutubeNarrative; 
         ) : null}
         <p className="mt-3 text-sm leading-6 text-slate-600">{narrative.limitations}</p>
       </section>
-      <EvidenceList title="Opening evidence" items={narrative.hook_evidence} />
+      <EvidenceList title="About the opening" items={narrative.hook_evidence} />
       <div className="grid gap-4 lg:grid-cols-2">
-        <EvidenceList title="Strengths" items={narrative.strengths} />
-        <EvidenceList title="Weaknesses" items={narrative.weaknesses} />
+        <EvidenceList title="What works well" items={narrative.strengths} />
+        <EvidenceList title="What could be better" items={narrative.weaknesses} />
       </div>
-      <EvidenceList title="Recommendations" items={narrative.recommendations} />
+      <EvidenceList title="Tips for next time" items={narrative.recommendations} />
       <section className="card p-5">
-        <h2 className="text-base font-semibold">Suggested next steps</h2>
-        <p className="mt-2 text-xs text-slate-500">Ideas from the written analysis. They are not predicted performance.</p>
+        <h2 className="text-base font-semibold">Ideas to try</h2>
+        <p className="mt-2 text-xs text-slate-500">Suggestions from the AI review. They're ideas, not a promise of better results.</p>
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <div>
-            <h3 className="text-sm font-semibold">Titles</h3>
+            <h3 className="text-sm font-semibold">Title ideas</h3>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
               {narrative.suggested_titles.map((item) => (
                 <li key={item}>{item}</li>
@@ -163,7 +163,7 @@ function NarrativeSections({ narrative, model }: { narrative: YoutubeNarrative; 
             </ul>
           </div>
           <div>
-            <h3 className="text-sm font-semibold">Thumbnail concepts</h3>
+            <h3 className="text-sm font-semibold">Thumbnail ideas</h3>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
               {narrative.thumbnail_concepts.map((item) => (
                 <li key={item}>{item}</li>
@@ -171,9 +171,9 @@ function NarrativeSections({ narrative, model }: { narrative: YoutubeNarrative; 
             </ul>
           </div>
         </div>
-        <h3 className="mt-4 text-sm font-semibold">Description</h3>
+        <h3 className="mt-4 text-sm font-semibold">Suggested description</h3>
         <p className="mt-2 text-sm leading-6 text-slate-700">{narrative.suggested_description}</p>
-        <h3 className="mt-4 text-sm font-semibold">Content ideas</h3>
+        <h3 className="mt-4 text-sm font-semibold">Ideas for future videos</h3>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
           {narrative.content_ideas.map((item) => (
             <li key={item}>{item}</li>
@@ -191,9 +191,9 @@ export function YoutubeResults({ analysisId }: { analysisId: string }) {
   return (
     <QueryPanel
       query={analysis}
-      loadingLabel="Loading saved YouTube analysis"
+      loadingLabel="Loading your saved YouTube analysis…"
       emptyTitle="Analysis not found"
-      emptyBody="This saved YouTube analysis is no longer available."
+      emptyBody="This saved YouTube analysis isn't available any more."
       isEmpty={() => false}
     >
       {(data) => (
@@ -217,7 +217,7 @@ function ResultsBody({ data, others }: { data: YoutubeAnalysis; others: YoutubeL
       const next = await refreshYoutube(analysis.id);
       navigate(`/youtube/${next.id}`);
     } catch (caught: unknown) {
-      setRefreshError(caught instanceof Error ? caught.message : "The refresh failed.");
+      setRefreshError(caught instanceof Error ? caught.message : "We couldn't get fresh numbers. Please try again.");
     } finally {
       setRefreshing(false);
     }
@@ -239,7 +239,7 @@ function ResultsBody({ data, others }: { data: YoutubeAnalysis; others: YoutubeL
             </div>
           )}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Saved YouTube analysis</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Your saved YouTube analysis</p>
             <h2 className="mt-2 text-xl font-semibold">{analysis.metadata.title}</h2>
             <p className="mt-2 text-sm text-slate-600">
               {analysis.metadata.channel_title}
@@ -257,10 +257,10 @@ function ResultsBody({ data, others }: { data: YoutubeAnalysis; others: YoutubeL
         </div>
         <div className="flex flex-wrap gap-3 border-t border-slate-200 px-5 py-4">
           <button type="button" className="btn-secondary" onClick={() => downloadReport(analysis)}>
-            Export JSON report
+            Download report (JSON file)
           </button>
           <button type="button" className="btn-secondary" onClick={() => void onRefresh()} disabled={refreshing}>
-            {refreshing ? "Fetching fresh statistics…" : "Refresh from YouTube"}
+            {refreshing ? "Getting fresh numbers…" : "Get fresh numbers from YouTube"}
           </button>
           <Link to="/youtube" className="text-sm font-semibold text-indigo-700">
             Analyse another video
@@ -279,27 +279,31 @@ function ResultsBody({ data, others }: { data: YoutubeAnalysis; others: YoutubeL
         <KpiCard
           label="Views"
           value={countLabel(stats.views, stats.views_available)}
-          detail={stats.views_available ? "Public view count" : "YouTube did not return a view count"}
+          detail={stats.views_available ? "Public view count" : "YouTube didn't show a view count"}
         />
         <KpiCard
           label="Likes"
           value={countLabel(stats.likes, stats.likes_available)}
-          detail={stats.likes_available ? "Public like count" : "Like count is hidden or missing"}
+          detail={stats.likes_available ? "Public like count" : "Likes are hidden or missing"}
         />
         <KpiCard
           label="Comments"
           value={countLabel(stats.comments, stats.comments_available)}
-          detail={stats.comments_available ? "Public comment count" : "Comment count is hidden or missing"}
+          detail={stats.comments_available ? "Public comment count" : "Comments are hidden or missing"}
         />
         <KpiCard
           label="Duration"
           value={formatDuration(analysis.metadata.duration_seconds)}
-          detail={analysis.metadata.duration_seconds === null ? "Duration was not returned" : "From the public video metadata"}
+          detail={analysis.metadata.duration_seconds === null ? "YouTube didn't show the length" : "Video length"}
         />
         <KpiCard
           label="Engagement rate"
           value={formatRate(stats.engagement_rate)}
-          detail={stats.engagement_rate === null ? "Needs public views, likes, and comments" : stats.engagement_formula}
+          detail={
+            stats.engagement_rate === null
+              ? "Needs public views, likes, and comments"
+              : `Likes and comments compared with views (${stats.engagement_formula})`
+          }
         />
         <KpiCard
           label="Views per day"
@@ -322,7 +326,7 @@ function ResultsBody({ data, others }: { data: YoutubeAnalysis; others: YoutubeL
         message={analysis.prediction.message}
         limitations={analysis.prediction.limitations}
         series={analysis.prediction.series}
-        method={analysis.prediction.method}
+        method={analysis.prediction.model_label ?? analysis.prediction.method}
       />
       {analysis.warnings.length > 0 ? (
         <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
@@ -341,14 +345,26 @@ function ResultsBody({ data, others }: { data: YoutubeAnalysis; others: YoutubeL
       />
 
       <section className="card p-5">
-        <h2 className="text-base font-semibold">What was measured</h2>
+        <h2 className="text-base font-semibold">Where these numbers come from</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-700">
-          <li>Public statistics come from the yt-dlp metadata snapshot saved with this analysis. The video file was not downloaded.</li>
           <li>
-            Transcript: {analysis.transcript.available ? "text was supplied to the written analysis." : analysis.transcript.reason}
+            The numbers come from the video's public YouTube page, saved when you ran this analysis. We didn't download
+            the video.
           </li>
-          <li>Creator analytics: {analysis.analytics.reason}</li>
-          <li>Comments: {analysis.comments_status}. {analysis.comments.length} public comment snippets were stored.</li>
+          <li>
+            Spoken words (transcript): {analysis.transcript.available ? "used for the written review." : analysis.transcript.reason}
+          </li>
+          <li>Your YouTube Studio numbers: {analysis.analytics.reason}</li>
+          <li>
+            Comment text:{" "}
+            {analysis.comments_status === "available"
+              ? "available"
+              : analysis.comments_status === "disabled"
+                ? "comments are turned off"
+                : "not read"}
+            .{" "}
+            {analysis.comments.length} public comments were saved.
+          </li>
         </ul>
       </section>
 
@@ -356,14 +372,14 @@ function ResultsBody({ data, others }: { data: YoutubeAnalysis; others: YoutubeL
         <NarrativeSections narrative={analysis.narrative} model={analysis.model} />
       ) : (
         <section className="card border-amber-200 bg-amber-50 p-5" role="status">
-          <h2 className="text-base font-semibold text-amber-950">Written analysis unavailable</h2>
+          <h2 className="text-base font-semibold text-amber-950">Written review not available</h2>
           <p className="mt-2 text-sm leading-6 text-amber-950">{analysis.narrative_message}</p>
         </section>
       )}
 
       {analysis.metadata.description ? (
         <section className="card p-5">
-          <h2 className="text-base font-semibold">Description used as metadata</h2>
+          <h2 className="text-base font-semibold">The video's description</h2>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{analysis.metadata.description}</p>
         </section>
       ) : null}

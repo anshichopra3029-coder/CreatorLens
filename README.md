@@ -82,7 +82,7 @@ Copy-Item .env.example .env
 
 Public YouTube metadata is read with `yt-dlp` on the server. A YouTube Data API key is not required. `YOUTUBE_CACHE_SECONDS` defaults to 21600. `GEMINI_API_KEY` is still required for written suggestions. `YOUTUBE_OAUTH_CLIENT_ID` and `YOUTUBE_OAUTH_CLIENT_SECRET` are reserved for a later creator connection and are not used yet.
 
-An analytics CSV does not need a YouTube key. Preview it, then analyze it, from Analyze YouTube. A sample with ten dated rows is `backend/app/data/sample_video_analytics.csv`. A forecast is trained only when one video has at least eight dated view counts. One public snapshot is stored without a trained model. Engagement from a file is `(likes + comments) / views × 100`, or `(likes + comments + shares) / views × 100` when the shares column is present. Missing counts stay missing.
+An analytics CSV does not need a YouTube key. Preview it, then analyze it, from Analyze YouTube. A sample with ten dated rows is `backend/app/data/sample_video_analytics.csv`. A forecast is made when one video has at least three dated view counts (see "Views forecast" below). One public snapshot is stored without a trained model. Engagement from a file is `(likes + comments) / views × 100`, or `(likes + comments + shares) / views × 100` when the shares column is present. Missing counts stay missing.
 
 ## Frontend
 
@@ -147,6 +147,14 @@ A successful response reports the filename, size, row count, and column names. I
 | POST | `/api/analytics/analyses` | Calculate metrics, an eligible forecast, and optional Gemini suggestions |
 | GET | `/api/analytics/analyses` | Saved analytics CSV analyses |
 | GET | `/api/analytics/analyses/{id}` | One saved analytics CSV analysis |
+| GET | `/api/youtube/videos` | Saved videos, one row each, with recorded view-count totals |
+| GET | `/api/youtube/videos/{video_id}/forecast` | Holt versus baseline forecast from the video's dated view counts |
+| POST | `/api/youtube/videos/{video_id}/snapshot` | Record the current public view count (at most once per hour) |
+| POST | `/api/youtube/videos/{video_id}/observations` | Import dated view history from a CSV (`observed_at,views`) |
+| POST | `/api/predictions/train` | Train the engagement-rate model from a saved posts CSV (`{"source": "document", "document_id": "..."}`) or the demo posts (`{"source": "demo"}`) |
+| GET | `/api/predictions/models` | Trained engagement-rate models with their held-out scores |
+| GET | `/api/predictions/models/{id}` | One trained model's evaluation, importance, and limitations |
+| POST | `/api/predictions/models/{id}/predict` | Predict a planned post's engagement rate from platform, category, posting date, title, and duration |
 
 The dashboard routes accept optional `category`, `platform`, `start_date`, and `end_date` query parameters. Dates use `YYYY-MM-DD`. An unknown category returns an empty demo result rather than invented rows.
 
@@ -158,9 +166,48 @@ Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, and
 
 Saved YouTube analyses, documents, analytics files, diagnoses, and experiments are queried with the user id from the session. Rows whose `user_id` is null stay in the database and are not visible to any account. They are not assigned to the first person who registers.
 
+## Views forecast
+
+Predictions → Saved sources lists each saved video once. **Show forecast** calls `GET /api/youtube/videos/{video_id}/forecast`, which reads every dated view count for that video and compares two methods:
+
+- **Baseline**: future views equal the latest recorded count.
+- **Holt's linear exponential smoothing** (`statsmodels`): a smoothed level plus a smoothed trend, updated at every observation.
+
+Snapshots are irregular, so cumulative views are resampled onto a regular grid (1, 3, 6, 12, or 24 hours, the largest step not longer than the median gap) by straight-line interpolation between real observations. Data rules: fewer than 3 distinct timestamps gives no forecast; 3–5 gives a provisional baseline forecast; from 6, a rolling-origin back-test (each origin has at least 4 earlier observations and is scored on the real observations within the next 7 days) compares MAE and error relative to real growth. Holt's model is selected only when its MAE is at least 10% lower than the baseline's. Horizons (24 hours, 3 days, 7 days) longer than twice the recorded history are hidden, and forecasts never go below the latest count. No uncertainty interval is drawn.
+
+View counts come from saved analyses (a cached re-analysis with identical counts is not counted again, and is no longer saved twice), from **Record a snapshot now** (`POST /api/youtube/videos/{id}/snapshot`, at most once per hour, bypasses the metadata cache), and from a CSV import (`POST /api/youtube/videos/{id}/observations`):
+
+```csv
+observed_at,views
+2026-10-01T09:00:00Z,1200
+2026-10-02T09:00:00Z,1850
+2026-10-03,2400
+```
+
+`observed_at` is ISO 8601 (a date alone means 00:00 UTC, a time without a zone is read as UTC, future times are rejected). `views` is a whole number of at least 0. An optional `video_id` column must match the video. Repeated timestamps in a file are rejected; timestamps already stored are skipped. To collect snapshots for every saved video on a schedule (for example Windows Task Scheduler), run from `backend`:
+
+```bash
+python -m app.services.view_history --collect
+```
+
+## Engagement rate model
+
+The Predictions page can train a model that estimates a planned post's engagement rate, `(likes + comments + shares) / views × 100` (or `(likes + comments) / views × 100` when the file has no shares column). Inputs are limited to fields known before publishing: platform, category, posting date (`post_datetime`, `posting_date`, `date`, …), posting hour (`posting_hour`), title, and duration. A CSV uploaded on Upload Dataset is checked for these columns when it is saved; `GET /api/predictions/datasets` lists every saved CSV with whether it can train and why not. Views, likes, comments, shares, followers gained, and other outcome columns are never used as inputs.
+
+Training compares a mean baseline, a decision tree, a random forest, and XGBoost on the same held-out posts. The split is chronological when posting dates exist (the latest 20%, at least 6 posts). The model with the lowest held-out MAE is refit on every usable post and saved with its scikit-learn preprocessing pipeline to `backend/data/models` (not committed). If no model beats the mean baseline, the model is saved for inspection but refuses to predict. Training needs at least 30 usable posts; the 16 built-in demo posts are not enough, so the demo option returns that message instead of a model.
+
+Train from the page after uploading a posts CSV on Upload Dataset, or from `backend`:
+
+```bash
+python -m app.services.engagement_model --csv path/to/posts.csv
+python -m app.services.engagement_model --document <saved CSV document id>
+```
+
+Each prediction shows the typical held-out error, the training average for matching groups, and, when XGBoost is selected, per-input TreeSHAP contributions from XGBoost itself. Importance and group averages are associations in the training file, not causes.
+
 ## Not in this phase
 
-PostgreSQL, SQLAlchemy, and scikit-learn are intentionally absent. Saved document, YouTube, and analytics-file analyses use local SQLite files in `backend/data`, which is not committed. Public YouTube metadata is extracted with `yt-dlp` and does not use a YouTube Data API key. Transcripts, impressions, click-through rate, and audience retention from YouTube stay unavailable until a creator connects through OAuth. A view forecast is trained only when one video has at least eight dated view counts. A single public snapshot is stored without a trained forecast. Gemini suggestions are omitted, not invented, when `GEMINI_API_KEY` is missing.
+PostgreSQL and SQLAlchemy are intentionally absent. Saved document, YouTube, and analytics-file analyses use local SQLite files in `backend/data`, which is not committed. Public YouTube metadata is extracted with `yt-dlp` and does not use a YouTube Data API key. Transcripts, impressions, click-through rate, and audience retention from YouTube stay unavailable until a creator connects through OAuth. A single public snapshot is stored without a trained forecast. Gemini suggestions are omitted, not invented, when `GEMINI_API_KEY` is missing.
 
 Try the sample analytics file from the Analyze YouTube page:
 

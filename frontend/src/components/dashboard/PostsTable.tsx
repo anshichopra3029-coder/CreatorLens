@@ -7,7 +7,7 @@ export function PostsTable({ posts, caption }: { posts: PostRecord[]; caption: s
     return (
       <EmptyState
         title="No posts in this view"
-        body="The demo dataset has no rows for the current filters."
+        body="No demo posts match the current filters."
       />
     );
   }

@@ -31,9 +31,9 @@ export function apiBaseUrl(): string {
 function unavailableMessage(): string {
   const base = apiBaseUrl();
   if (base === "") {
-    return "The API is unavailable. Start the backend on port 8000 so this app can proxy /api.";
+    return "CreatorLens can't reach its server right now. If you run it yourself, start the backend on port 8000 and try again.";
   }
-  return `The API is unavailable at ${base}. Start the backend and try again.`;
+  return `CreatorLens can't reach its server at ${base}. Start the backend and try again.`;
 }
 
 function detailMessage(payload: unknown, fallback: string): string {
@@ -80,7 +80,7 @@ async function request<T>(path: string): Promise<T> {
     noteUnauthorized();
   }
   if (!response.ok) {
-    throw new ApiError(response.status, detailMessage(payload, `Request failed (${response.status}).`));
+    throw new ApiError(response.status, detailMessage(payload, `Something went wrong on the server (${response.status}). Please try again.`));
   }
   return payload as T;
 }
@@ -129,7 +129,7 @@ export function uploadCsv(file: File, onProgress: (percent: number) => void): Pr
         try {
           payload = JSON.parse(requestBody.responseText) as unknown;
         } catch {
-          reject(new ApiError(requestBody.status, "The server returned a response that was not JSON."));
+          reject(new ApiError(requestBody.status, "The server sent back an answer we couldn't read. Please try again."));
           return;
         }
       }
@@ -140,7 +140,7 @@ export function uploadCsv(file: File, onProgress: (percent: number) => void): Pr
       reject(
         new ApiError(
           requestBody.status,
-          detailMessage(payload, `Upload failed (${requestBody.status}).`),
+          detailMessage(payload, `The upload didn't work (${requestBody.status}). Please try again.`),
         ),
       );
     };

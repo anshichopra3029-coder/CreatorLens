@@ -12,26 +12,27 @@ export function SettingsPage() {
     try {
       const health = await getHealth();
       setHealthState("ok");
-      setHealthMessage(`${health.service} responded with status “${health.status}”.`);
+      setHealthMessage(`Connected. ${health.service} is running (status: “${health.status}”).`);
     } catch (error: unknown) {
       setHealthState("error");
-      setHealthMessage(error instanceof Error ? error.message : "The API could not be reached.");
+      setHealthMessage(error instanceof Error ? error.message : "We couldn't reach the CreatorLens server.");
     }
   }
 
   return (
     <div className="space-y-4">
       <p className="max-w-2xl text-sm leading-6 text-slate-600">
-        Saved analyses stay on this machine. The API address stays on the server.
+        Your saved analyses stay on this computer.
       </p>
 
       <section className="card p-5">
         <h2 className="text-base font-semibold">App preferences</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Appearance stays light in this phase. The API address comes from <code>VITE_API_BASE_URL</code>.
+          Use the button below to check that the app can talk to the CreatorLens server.
         </p>
         <p className="mt-3 text-sm text-slate-800">
-          Current API base URL: <span className="font-medium">{apiBaseUrl() || "same origin (/api)"}</span>
+          Server address (technical, set by <code>VITE_API_BASE_URL</code>):{" "}
+          <span className="font-medium">{apiBaseUrl() || "same origin (/api)"}</span>
         </p>
         <button
           type="button"
@@ -39,7 +40,7 @@ export function SettingsPage() {
           onClick={() => void checkConnection()}
           disabled={healthState === "loading"}
         >
-          {healthState === "loading" ? "Checking…" : "Check API connection"}
+          {healthState === "loading" ? "Checking…" : "Check connection"}
         </button>
         {healthMessage ? (
           <p
@@ -54,8 +55,8 @@ export function SettingsPage() {
       <section className="card p-5">
         <h2 className="text-base font-semibold">Dataset preferences</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Uploaded files are validated in memory and then discarded. There is no saved dataset to configure, and the
-          charts continue to use the built-in demo file.
+          Files you upload are saved and analysed. When you open one of them, the Dashboard, Analytics, and Insights
+          pages show your data instead of the demo. There's nothing else to set up here.
         </p>
         <Link to="/upload" className="btn-secondary mt-4">
           Go to upload
@@ -65,7 +66,8 @@ export function SettingsPage() {
       <section className="card p-5">
         <h2 className="text-base font-semibold">Saved work</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          YouTube analyses, documents, and analytics files are saved without an account.
+          Your YouTube analyses, documents, and analytics files are saved without needing an account. Sign-in is
+          paused for now.
         </p>
       </section>
     </div>

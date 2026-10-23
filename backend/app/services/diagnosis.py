@@ -47,6 +47,14 @@ _FORBIDDEN = (
     " ctr",
     "guarantee",
 )
+PLAIN_LANGUAGE = (
+    "Write for a content creator who is a beginner, not a data analyst.\n"
+    "Use plain everyday words and short sentences. Speak to the reader as 'you' where it feels natural.\n"
+    "Avoid jargon such as baseline, median, holdout, MAE, RMSE, regression, model, metric, evidence level, "
+    "interpolation, or formula names. If a term is needed, explain it in a few simple words, for example: "
+    "engagement means how many people liked or commented compared with how many viewed.\n"
+    "Describe calculations in words, not formulas. Mention only the few numbers that matter most.\n"
+)
 
 
 class DiagnosisError(Exception):
@@ -110,23 +118,23 @@ def build_evidence(
     level, reasons = _level(len(dated), len(peer_rates))
     scenario = _scenario(len(dated), len(peer_rates))
     limitations = [
-        f"{RATE_LABEL} uses {formula} only when views are greater than zero and the required counts are present. "
-        "It is not YouTube's official analytics metric.",
-        "A missing count is not treated as zero.",
-        "Explanations of viewer behavior are hypotheses, not measured causes.",
-        "Raw view counts from videos of different ages are not compared.",
+        "Engagement here means likes and comments compared with views. We only work it out when views are above zero "
+        f"and the counts are available ({formula}). It's our own calculation, not an official YouTube number.",
+        "If a count is missing, we leave it blank instead of counting it as zero.",
+        "Any reasons we suggest are educated guesses, not proven causes.",
+        "We don't compare total views between videos of different ages, because older videos have had more time.",
     ]
     if len(dated) < 2:
-        limitations.append("Fewer than two dated view counts are available, so a change over time was not calculated.")
+        limitations.append("We have fewer than two view counts saved on different dates, so we couldn't measure change over time.")
     if len(peer_rates) < 3:
-        limitations.append("Fewer than three other videos have this engagement rate, so no creator baseline was calculated.")
+        limitations.append("Fewer than three of your other videos are saved with engagement, so we couldn't work out your usual level.")
     unanswered = [
-        "Why viewers watched, liked, or commented cannot be established from these counts.",
+        "These numbers can't tell us why people watched, liked, or commented.",
     ]
     if len(dated) < 2:
-        unanswered.append("Whether views are rising or falling is unknown from a single dated count.")
+        unanswered.append("With only one dated count, we can't tell whether views are rising or falling.")
     if len(peer_rates) < 3:
-        unanswered.append("Performance against this creator's other videos is unknown without at least three comparable videos.")
+        unanswered.append("We can't compare this video with your others until at least three comparable videos are saved.")
     supplied = " ".join(extra_observations or []).lower()
     if "impression" not in supplied:
         unanswered.append("Impressions were not supplied.")
@@ -172,13 +180,13 @@ def generate_diagnosis(
         return (
             calculated,
             "calculated",
-            "These sections were written from the calculated evidence. Gemini is not configured, so the wording was not rewritten by the model.",
+            "We wrote this straight from your video's numbers. The AI writer (Gemini) isn't set up, so the wording wasn't polished by AI.",
         )
     if client is None and not gemini_sdk_info()[0]:
         return (
             calculated,
             "calculated",
-            "These sections were written from the calculated evidence. The Gemini SDK is not installed.",
+            "We wrote this straight from your video's numbers. The AI writer (Gemini) isn't installed on the server.",
         )
     try:
         gemini = client if client is not None else _build_client()
@@ -186,18 +194,18 @@ def generate_diagnosis(
         diagnosis.source = "gemini"
     except DiagnosisError as exc:
         logger.warning("Gemini did not rewrite the performance diagnosis.")
-        return calculated, "calculated", f"{exc.detail} The sections below use the calculated evidence."
+        return calculated, "calculated", f"{exc.detail} The sections below were written straight from your numbers instead."
     except Exception:
         logger.warning("Performance diagnosis rewrite failed.")
         return (
             calculated,
             "calculated",
-            "Gemini did not return a usable diagnosis. The sections below use the calculated evidence.",
+            "The AI didn't send back a usable answer. The sections below were written straight from your numbers instead.",
         )
     return (
         diagnosis,
         "generated",
-        "Gemini rewrote the wording. Every evidence line was checked against the calculated observations.",
+        "Written by AI (Gemini) in plain words. We checked every fact it used against your actual numbers.",
     )
 
 
@@ -215,10 +223,10 @@ def compose_diagnosis(evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
     if evidence.engagement_rate is not None and engagement_line:
         strengths.append(
             StrengthInsight(
-                title="Engagement rate by views is measured",
+                title="We could measure engagement",
                 explanation=(
-                    f"The rate is {evidence.engagement_rate:.2f}%. "
-                    "This records likes and comments against views. It does not say the video is above or below other videos unless a baseline is shown."
+                    f"Likes and comments add up to {evidence.engagement_rate:.2f}% of the views. "
+                    "On its own, this doesn't say whether the video did better or worse than your others."
                 ),
                 evidence=engagement_line,
                 claim_kind="observed",
@@ -228,10 +236,11 @@ def compose_diagnosis(evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
         if evidence.engagement_rate > evidence.baseline_rate + 0.05:
             strengths.append(
                 StrengthInsight(
-                    title="Engagement is above the saved median",
+                    title="More engagement than your usual level",
                     explanation=(
-                        f"The rate is above the median of {evidence.peer_sample_size} other saved videos. "
-                        "Raw view counts were not used, because videos of different ages are not directly comparable."
+                        f"This video gets more likes and comments for its views than the middle of your "
+                        f"{evidence.peer_sample_size} other saved videos. "
+                        "We didn't compare total views, because older videos have had more time to collect them."
                     ),
                     evidence=comparison_line,
                     baseline=evidence.baseline_label,
@@ -241,14 +250,15 @@ def compose_diagnosis(evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
         elif evidence.engagement_rate < evidence.baseline_rate - 0.05:
             improvements.append(
                 ImprovementInsight(
-                    title="Engagement is below the saved median",
+                    title="Less engagement than your usual level",
                     explanation=(
-                        f"The rate is below the median of {evidence.peer_sample_size} other saved videos. "
-                        "This compares engagement rate by views, not raw views."
+                        f"This video gets fewer likes and comments for its views than the middle of your "
+                        f"{evidence.peer_sample_size} other saved videos. "
+                        "This looks at likes and comments per view, not total views."
                     ),
                     evidence=comparison_line,
                     possible_causes=[
-                        "Possible explanation: viewers may watch this video without liking or commenting. The counts do not show why."
+                        "Possible explanation: people may be watching without liking or commenting. The numbers can't tell us why."
                     ],
                     claim_kind="inference",
                 )
@@ -256,8 +266,8 @@ def compose_diagnosis(evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
     if change_line and evidence.dated_view_points >= 2:
         strengths.append(
             StrengthInsight(
-                title="A later saved view count is on record",
-                explanation="The difference is between saved dated counts. It is not a forecast and it does not identify a cause.",
+                title="A newer view count is saved",
+                explanation="This compares two saved view counts. It isn't a prediction, and it doesn't tell us why views changed.",
                 evidence=change_line,
                 claim_kind="observed",
             )
@@ -265,8 +275,8 @@ def compose_diagnosis(evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
     if evidence.engagement_rate is None and engagement_line:
         improvements.append(
             ImprovementInsight(
-                title="Engagement rate by views could not be calculated",
-                explanation="A missing count was left missing. It was not treated as zero, so the rate was skipped.",
+                title="We couldn't work out engagement",
+                explanation="One of the counts is missing. We left it blank instead of guessing zero, so this number was skipped.",
                 evidence=engagement_line,
                 claim_kind="observed",
             )
@@ -274,8 +284,8 @@ def compose_diagnosis(evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
     if evidence.dated_view_points < 2 and single_line:
         improvements.append(
             ImprovementInsight(
-                title="A change over time cannot be judged",
-                explanation="One public snapshot cannot show growth, decline, or a recent daily trend.",
+                title="Too early to see a trend",
+                explanation="We only have one saved view count, so we can't tell yet whether views are going up or slowing down.",
                 evidence=single_line,
                 claim_kind="observed",
             )
@@ -284,8 +294,8 @@ def compose_diagnosis(evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
         few = _line(evidence, "fewer than three") or _line(evidence, "no median baseline") or single_line or count_line
         improvements.append(
             ImprovementInsight(
-                title="No creator baseline is available",
-                explanation="Fewer than three other videos have this engagement rate, so this video is not ranked against the channel.",
+                title="Nothing to compare with yet",
+                explanation="Fewer than three of your other videos are saved, so we can't say how this one compares with your usual results.",
                 evidence=few,
                 claim_kind="observed",
             )
@@ -293,7 +303,7 @@ def compose_diagnosis(evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
     if evidence.dated_view_points < 2 and single_line:
         reasons.append(
             ReasonItem(
-                statement="Possible explanation: these totals cover the video's public life so far, not a recent surge or drop.",
+                statement="Possible explanation: these totals cover the whole time the video has been public, not a recent jump or dip.",
                 evidence=single_line,
             )
         )
@@ -306,14 +316,14 @@ def compose_diagnosis(evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
         comment_line = _line(evidence, "Comment-to-view rate") or count_line
         reasons.append(
             ReasonItem(
-                statement="Possible explanation: viewers may be leaving likes without comments. These counts cannot show why.",
+                statement="Possible explanation: viewers may be tapping like without leaving a comment. The numbers can't show why.",
                 evidence=comment_line,
             )
         )
     if description_line and evidence.observations and "0 characters" in description_line:
         reasons.append(
             ReasonItem(
-                statement="Possible explanation: an empty description gives the page less text to scan. This does not prove it changed the view count.",
+                statement="Possible explanation: an empty description gives viewers and search less to read. This doesn't prove it affected the views.",
                 evidence=description_line,
             )
         )
@@ -335,7 +345,7 @@ def compose_diagnosis(evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
 
 
 def _request_with_retry(client: Any, evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
-    last = "Gemini returned a diagnosis that did not match the calculated evidence. No diagnosis was saved."
+    last = "The AI's answer didn't match your actual numbers, so we didn't use it."
     for _ in range(2):
         output = _call_model(client, evidence)
         try:
@@ -358,9 +368,21 @@ def _call_model(client: Any, evidence: DiagnosisEvidence) -> str:
         "possible_causes must each start with 'Possible explanation:'.\n"
         "Do not invent metrics, dates, sample sizes, retention, click-through rate, impressions, watch time, or traffic sources.\n"
         "Do not say a single snapshot shows growth or a creator average unless an observation says so.\n"
-        "Do not guarantee growth. Give at most three strengths, three improvements, and five actions.\n"
+        "Give at most three strengths, three improvements, and five actions.\n"
         "Label hypotheses with 'Possible explanation:'. Do not claim a title, thumbnail, or hook caused the counts.\n"
         "Priorities are High, Medium, or Low.\n\n"
+        "Writing style:\n"
+        + PLAIN_LANGUAGE
+        + "Only the summary, titles, explanations, possible_causes, reasons, actions, and success measures should be "
+        "in plain words. Evidence fields, baseline, and evidence_quality must still be copied exactly, even when they "
+        "contain technical words.\n"
+        "In your own wording you may round a number in a friendly way, such as 'about 6%' for 6.04%, but never change "
+        "its meaning and never add a number that is not in the observations.\n"
+        "Say 'your other saved videos' or 'your usual level' instead of median or baseline.\n"
+        "Outside copied evidence, never use these words: guarantee, thumbnail, hook, retention, click-through, CTR, "
+        "impressions, watch time, traffic source, channel average, creator average. "
+        "Use 'growth' or 'decline' only when an observation shows saved view counts on two different dates.\n"
+        "Do not promise results.\n\n"
         f"Evidence: {json.dumps(payload)}"
     )
     try:
@@ -375,15 +397,15 @@ def _call_model(client: Any, evidence: DiagnosisEvidence) -> str:
             },
         )
     except TimeoutError as exc:
-        raise DiagnosisError("The diagnosis request timed out. No diagnosis was created.") from exc
+        raise DiagnosisError("The AI took too long and timed out, so its answer wasn't used.") from exc
     except Exception as exc:
         text = str(exc).lower()
         if "429" in text or "rate limit" in text or "rate-limit" in text:
-            raise DiagnosisError("Gemini rate-limited the diagnosis request. No diagnosis was created.") from exc
-        raise DiagnosisError("The diagnosis request failed. No diagnosis was created.") from exc
+            raise DiagnosisError("The AI service is busy right now (rate-limited), so it couldn't help this time.") from exc
+        raise DiagnosisError("The AI request didn't go through, so its answer wasn't used.") from exc
     output = getattr(interaction, "output_text", None)
     if not isinstance(output, str) or output.strip() == "":
-        raise DiagnosisError("Gemini returned an empty diagnosis. No diagnosis was created.")
+        raise DiagnosisError("The AI sent back an empty answer, so it wasn't used.")
     return output
 
 
@@ -391,25 +413,25 @@ def _validate(output: str, evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
     try:
         diagnosis = PerformanceDiagnosis.model_validate_json(output)
     except ValidationError as exc:
-        raise DiagnosisError("Gemini returned a diagnosis that did not match the required structure.") from exc
+        raise DiagnosisError("The AI's answer didn't come back in the expected structure, so we didn't use it.") from exc
     allowed = set(evidence.observations)
     if diagnosis.evidence_quality.level != evidence.evidence_level:
-        raise DiagnosisError("Gemini changed the evidence level. No diagnosis was created.")
+        raise DiagnosisError("The AI changed how sure we can be (the evidence level), so we didn't use its answer.")
     for item in (*diagnosis.strengths, *diagnosis.improvements, *diagnosis.actions):
         if item.evidence not in allowed:
-            raise DiagnosisError("A diagnosis claim cited evidence that was not calculated. No diagnosis was created.")
+            raise DiagnosisError("The AI quoted a fact that isn't in your numbers, so we didn't use its answer.")
     for item in diagnosis.strengths:
         if item.baseline not in ("", evidence.baseline_label):
-            raise DiagnosisError("A diagnosis used a baseline that was not calculated. No diagnosis was created.")
+            raise DiagnosisError("The AI used a comparison we didn't calculate, so we didn't use its answer.")
     for item in diagnosis.improvements:
         for cause in item.possible_causes:
             if not cause.startswith("Possible explanation:"):
-                raise DiagnosisError("A possible cause was not labeled as a hypothesis. No diagnosis was created.")
+                raise DiagnosisError("The AI stated a guess as if it were a fact, so we didn't use its answer.")
     for item in diagnosis.reasons:
         if item.evidence not in allowed or not item.statement.startswith("Possible explanation:"):
-            raise DiagnosisError("A hypothesis did not cite calculated evidence. No diagnosis was created.")
+            raise DiagnosisError("The AI gave a reason that isn't backed by your numbers, so we didn't use its answer.")
     if len(diagnosis.actions) < 1:
-        raise DiagnosisError("Gemini did not return a testable action. No diagnosis was created.")
+        raise DiagnosisError("The AI didn't suggest anything you could try, so we didn't use its answer.")
     blob = " ".join(
         [
             diagnosis.summary,
@@ -422,7 +444,7 @@ def _validate(output: str, evidence: DiagnosisEvidence) -> PerformanceDiagnosis:
         ]
     )
     if _forbidden(blob, evidence):
-        raise DiagnosisError("The diagnosis included a claim the evidence does not support. No diagnosis was created.")
+        raise DiagnosisError("The AI made a claim your numbers can't support, so we didn't use its answer.")
     diagnosis.evidence_quality.reasons = list(evidence.evidence_reasons)
     diagnosis.evidence_quality.limitations = list(evidence.limitations)
     return diagnosis
@@ -580,15 +602,15 @@ def _direction(subject: float | None, baseline: float) -> str:
 def _level(dated_points: int, peer_count: int) -> tuple[str, list[str]]:
     reasons: list[str] = []
     if dated_points >= 8:
-        reasons.append(f"{dated_points} dated view counts are available.")
+        reasons.append(f"{dated_points} view counts are saved on different dates.")
     elif dated_points >= 2:
-        reasons.append(f"{dated_points} dated view counts are available.")
+        reasons.append(f"{dated_points} view counts are saved on different dates.")
     else:
-        reasons.append("Only one dated view count is available.")
+        reasons.append("Only one dated view count is saved so far.")
     if peer_count >= 3:
-        reasons.append(f"{peer_count} other videos have an engagement rate for a median baseline.")
+        reasons.append(f"{peer_count} of your other videos can be used for comparison.")
     else:
-        reasons.append("No creator baseline was calculated.")
+        reasons.append("Not enough of your other videos are saved to compare with yet.")
     if dated_points >= 8 or peer_count >= 8:
         return "Stronger evidence", reasons
     if dated_points >= 2 or peer_count >= 3:
@@ -623,12 +645,13 @@ def _content_lines(description_chars: int | None, duration_seconds: int | None) 
 def _summary(evidence: DiagnosisEvidence, change_line: str | None) -> str:
     title = evidence.title
     if evidence.views is None:
-        text = f"{title} does not have a view count."
+        text = f"{title} doesn't have a view count we can use."
     elif evidence.engagement_rate is None:
-        text = f"{title} has {evidence.views} views. Engagement rate by views was not calculated."
+        text = f"{title} has {evidence.views} views. We couldn't work out engagement (likes and comments compared with views)."
     else:
         text = (
-            f"{title} has {evidence.views} views and an engagement rate by views of {evidence.engagement_rate:.2f}%."
+            f"{title} has {evidence.views} views. Likes and comments add up to {evidence.engagement_rate:.2f}% of "
+            "those views (this is the engagement rate)."
         )
     if evidence.baseline_rate is not None and evidence.engagement_rate is not None:
         if evidence.engagement_rate > evidence.baseline_rate + 0.05:
@@ -638,11 +661,11 @@ def _summary(evidence: DiagnosisEvidence, change_line: str | None) -> str:
         else:
             direction = "in line with"
         text += (
-            f" That rate is {direction} the median of {evidence.peer_sample_size} other saved videos. "
-            "Raw views were not compared across videos of different ages."
+            f" That is {direction} the median (the middle value) of {evidence.peer_sample_size} of your other saved videos. "
+            "We don't compare total views across videos, because older videos have had longer to collect them."
         )
     elif evidence.dated_view_points < 2:
-        text += " This is one dated snapshot, so it cannot show growth, decline, or a creator average."
+        text += " This is one saved snapshot, so it cannot show growth, decline, or a creator average yet."
     if change_line:
         text += f" {change_line}"
     return text[:800]
@@ -661,20 +684,20 @@ def _actions(
         actions.append(
             ActionItem(
                 priority="High",
-                action=f"Save another dated view count for {evidence.title}, or upload a CSV with dated rows.",
-                reason="One snapshot cannot show whether views are rising or falling.",
+                action=f"Check {evidence.title} again later to save a second view count, or upload a CSV with dates.",
+                reason="With one snapshot we can't tell whether views are rising or falling.",
                 evidence=single_line,
-                success_measure="Compare the next saved view count with this one. Do not treat the current total as growth.",
+                success_measure="Compare the next saved view count with this one. Today's total on its own isn't growth.",
             )
         )
     if evidence.peer_sample_size < 3:
         actions.append(
             ActionItem(
                 priority="Medium",
-                action="Analyze at least three other videos from the same channel and compare engagement rate by views.",
-                reason="A creator median needs three other videos. Raw view counts stay out of that comparison because ages differ.",
+                action="Analyze at least three more videos from the same channel so we can compare engagement.",
+                reason="We need at least three of your other videos to work out your usual level. Total views aren't compared, because older videos have had more time.",
                 evidence=count_line,
-                success_measure="See whether this video's engagement rate sits above or below that median.",
+                success_measure="See whether this video's engagement is above or below your usual level.",
             )
         )
     if (
@@ -686,53 +709,53 @@ def _actions(
         actions.append(
             ActionItem(
                 priority="High",
-                action="Publish a follow-up on a similar topic and compare its engagement rate with this median.",
-                reason="The current rate is below the median of the other saved videos.",
+                action="Make a follow-up video on a similar topic and compare its engagement with your usual level.",
+                reason="This video gets fewer likes and comments per view than the middle of your other saved videos.",
                 evidence=comparison_line,
-                success_measure="After a similar amount of time, compare engagement rate by views with the saved median. Do not expect a guaranteed lift.",
+                success_measure="After a similar amount of time, compare its likes and comments per view with your usual level. Results aren't promised.",
             )
         )
     if description_line and "0 characters" in description_line:
         actions.append(
             ActionItem(
                 priority="Medium",
-                action="On the next video, put the result in the first line of the description.",
-                reason="This description is empty. That is a content fact, not proof that it changed the view count.",
+                action="On your next video, say what viewers will get in the first line of the description.",
+                reason="This video's description is empty. That's a fact about the page, not proof that it changed the views.",
                 evidence=description_line,
-                success_measure="Compare the next video's engagement rate with this one after both have a saved snapshot.",
+                success_measure="Once both videos have a saved snapshot, compare the next video's engagement with this one.",
             )
         )
     if change_line and evidence.dated_view_points < 8:
         actions.append(
             ActionItem(
                 priority="Low",
-                action="Collect more dated view counts before treating the difference as a trend.",
-                reason="A difference between two dates is not a forecast.",
+                action="Save more view counts over time before calling this a trend.",
+                reason="A difference between two dates isn't a prediction.",
                 evidence=change_line,
-                success_measure="Review the diagnosis again after at least eight dated view counts exist for this video.",
+                success_measure="Look at this diagnosis again once at least eight dated view counts are saved for this video.",
             )
         )
     fillers = [
         ActionItem(
             priority="Low",
-            action="If you have an authorized analytics export, upload it before judging impressions, retention, or watch time.",
-            reason="Those fields are absent unless the file supplies them.",
+            action="If you have a YouTube Studio export, upload it before judging impressions, retention, or watch time.",
+            reason="Those numbers aren't available unless your file includes them.",
             evidence=count_line,
-            success_measure="The next diagnosis should list impressions or retention only when the upload contains them.",
+            success_measure="The next diagnosis will mention impressions or retention only if your upload has them.",
         ),
         ActionItem(
             priority="Low",
-            action="Compare future videos on engagement rate by views, not on raw view totals.",
-            reason="Videos of different ages are not directly comparable by views.",
+            action="Compare future videos by engagement (likes and comments per view), not by total views.",
+            reason="Older videos have had more time to collect views, so totals aren't a fair comparison.",
             evidence=count_line,
-            success_measure="The next saved comparison should name the engagement-rate median and the number of videos in it.",
+            success_measure="The next comparison should show your usual engagement level and how many videos it's based on.",
         ),
         ActionItem(
             priority="Medium",
-            action=f"Re-open the saved analysis for {evidence.title} after you add a dated row or another video.",
-            reason="The evidence level changes only when more comparable observations are saved.",
+            action=f"Open the saved analysis for {evidence.title} again after you add a dated count or another video.",
+            reason="How sure we can be only goes up when more comparable data is saved.",
             evidence=change_line or single_line or count_line,
-            success_measure="Confirm the evidence label and the dated-count sentence match the new saved rows.",
+            success_measure="Check that the confidence label and the dated-count line match your new data.",
         ),
     ]
     for filler in fillers:

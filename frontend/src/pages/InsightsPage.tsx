@@ -14,13 +14,13 @@ function InsightsDemo() {
   return (
     <div className="space-y-6">
       <DemoBanner>
-        These are illustrative demo insights. They describe the built-in sample and are not causal findings.
+        These are example insights from the built-in demo data. They describe patterns, not proven causes.
       </DemoBanner>
       <QueryPanel
         query={insights}
-        loadingLabel="Loading demo insights"
+        loadingLabel="Loading demo insights…"
         emptyTitle="No demo insights"
-        emptyBody="The demo dataset did not produce any insight cards."
+        emptyBody="The demo data didn't produce any insights."
         isEmpty={(data) => data.cards.length === 0}
       >
         {(data) => (
@@ -30,7 +30,7 @@ function InsightsDemo() {
             <div className="grid gap-4 lg:grid-cols-2">
               {data.cards.map((card) => (
                 <article key={card.id} className="card p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Illustrative demo insight</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Example insight (demo data)</p>
                   <h2 className="mt-2 text-lg font-semibold">{card.title}</h2>
                   <p className="mt-3 text-sm leading-6 text-slate-800">{card.summary}</p>
                   <p className="mt-3 text-sm leading-6 text-slate-600">{card.evidence}</p>

@@ -10,6 +10,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.engagement import PostsDatasetCheck
+
 DocumentFormat = Literal["csv", "pdf", "docx"]
 DocumentStatus = Literal["analyzed", "extracted", "unreadable"]
 NarrativeStatus = Literal["generated", "unavailable", "not_requested"]
@@ -116,6 +118,7 @@ class DocumentAnalysisResponse(BaseModel):
     recommendations: list[str] = Field(default_factory=list)
     text_preview: str = ""
     csv_profile: CsvProfile | None = None
+    posts_dataset: PostsDatasetCheck | None = None
     questions: list[QuestionRecord] = Field(default_factory=list)
     model: str | None = None
 

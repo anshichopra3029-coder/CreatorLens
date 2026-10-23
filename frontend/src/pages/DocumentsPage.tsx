@@ -10,13 +10,13 @@ export function DocumentsPage() {
   return (
     <div className="space-y-6">
       <p className="max-w-2xl text-sm leading-6 text-slate-600">
-        These analyses were saved by the server. Opening one makes it the active dataset on the dashboard.
+        Here are the files you've uploaded. Opening one also shows its numbers on the Dashboard.
       </p>
       <QueryPanel
         query={saved}
-        loadingLabel="Loading saved analyses"
-        emptyTitle="No saved analyses"
-        emptyBody="Upload a CSV, PDF, or DOCX file to create the first analysis."
+        loadingLabel="Loading your saved files…"
+        emptyTitle="No saved files yet"
+        emptyBody="Upload a CSV, PDF, or Word file to get your first analysis."
         isEmpty={(data) => data.documents.length === 0}
       >
         {(data) => (

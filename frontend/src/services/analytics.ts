@@ -3,7 +3,7 @@ import { noteUnauthorized, sessionHeaders } from "./session.ts";
 import type { AnalyticsAnalysis, AnalyticsListResponse, AnalyticsPreview } from "../types/analytics.ts";
 
 function unavailableMessage(): string {
-  return `The API is unavailable at ${apiBaseUrl()}. Start the backend and try again.`;
+  return `We can't reach the CreatorLens server${apiBaseUrl() ? ` at ${apiBaseUrl()}` : ""} right now. Make sure the backend is running, then try again.`;
 }
 
 function detailMessage(payload: unknown, fallback: string): string {
@@ -35,7 +35,7 @@ async function upload<T>(path: string, file: File): Promise<T> {
     noteUnauthorized();
   }
   if (!response.ok) {
-    throw new ApiError(response.status, detailMessage(payload, `Upload failed (${response.status}).`));
+    throw new ApiError(response.status, detailMessage(payload, `The upload didn't work (${response.status}). Please try again.`));
   }
   return payload as T;
 }
@@ -55,7 +55,7 @@ async function request<T>(path: string): Promise<T> {
     noteUnauthorized();
   }
   if (!response.ok) {
-    throw new ApiError(response.status, detailMessage(payload, `Request failed (${response.status}).`));
+    throw new ApiError(response.status, detailMessage(payload, `Something went wrong (${response.status}). Please try again.`));
   }
   return payload as T;
 }

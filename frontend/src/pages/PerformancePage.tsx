@@ -25,14 +25,14 @@ export function PerformancePage() {
   const { analysisId } = useParams();
   const query = useApiQuery(() => getAnalytics(analysisId ?? ""), analysisId ?? "missing");
   if (!analysisId) {
-    return <p className="text-sm text-slate-600">Choose a saved analytics file.</p>;
+    return <p className="text-sm text-slate-600">Choose one of your saved analytics files.</p>;
   }
   return (
     <QueryPanel
       query={query}
-      loadingLabel="Loading saved analytics"
+      loadingLabel="Loading your saved analytics…"
       emptyTitle="Analysis not found"
-      emptyBody="This saved analytics file is no longer available."
+      emptyBody="This saved analytics file isn't available any more."
       isEmpty={() => false}
     >
       {(data) => <PerformanceBody data={data} />}
@@ -59,7 +59,7 @@ function PerformanceBody({ data }: { data: AnalyticsAnalysis }) {
   return (
     <div className="space-y-6">
       <section className="card p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Uploaded analytics</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Your uploaded analytics</p>
         <h2 className="mt-2 text-xl font-semibold">{data.filename}</h2>
         <p className="mt-2 text-sm text-slate-600">
           {data.summary.video_count} videos · {data.summary.observation_count} rows · Saved {data.created_at}
@@ -74,18 +74,18 @@ function PerformanceBody({ data }: { data: AnalyticsAnalysis }) {
         <KpiCard
           label="Latest views"
           value={data.summary.total_latest_views === null ? "Unavailable" : formatNumber(data.summary.total_latest_views)}
-          detail="Sum of the latest view count for each video"
+          detail="The newest view count for each video, added together"
         />
         <KpiCard
           label="Average engagement"
           value={formatRate(data.summary.average_engagement_rate)}
-          detail={data.summary.engagement_formula}
+          detail={`Likes and comments compared with views (${data.summary.engagement_formula})`}
         />
-        <KpiCard label="Videos" value={formatNumber(data.summary.video_count)} detail="Distinct video IDs or titles" />
+        <KpiCard label="Videos" value={formatNumber(data.summary.video_count)} detail="Different videos in your file" />
         <KpiCard
           label="Dated rows"
           value={formatNumber(data.observations.filter((row) => row.observed_at).length)}
-          detail="Rows with a usable date"
+          detail="Rows with a date we could read"
         />
       </section>
 
@@ -104,15 +104,15 @@ function PerformanceBody({ data }: { data: AnalyticsAnalysis }) {
         ) : (
           <section className="card p-5">
             <h2 className="text-base font-semibold">Latest views by video</h2>
-            <p className="mt-2 text-sm text-slate-600">Each bar is the newest view count in the file, not a time series.</p>
+            <p className="mt-2 text-sm text-slate-600">Each bar is the newest view count in your file, not views over time.</p>
             <div className="mt-4 h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={comparison} margin={{ top: 8, right: 8, left: 0, bottom: 48 }}>
-                  <CartesianGrid stroke="#e2e8f0" vertical={false} />
-                  <XAxis dataKey="name" interval={0} angle={-28} textAnchor="end" height={72} tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} width={64} tickFormatter={(value: number) => formatNumber(value)} />
+                  <CartesianGrid stroke="#E4E2EE" vertical={false} />
+                  <XAxis dataKey="name" interval={0} angle={-28} textAnchor="end" height={72} tick={{ fill: "#4D535D", fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "#4D535D", fontSize: 12 }} axisLine={false} tickLine={false} width={64} tickFormatter={(value: number) => formatNumber(value)} />
                   <Tooltip formatter={(value) => formatNumber(typeof value === "number" ? value : 0)} />
-                  <Bar dataKey="views" name="Latest views" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={48} />
+                  <Bar dataKey="views" name="Latest views" fill="#5848D2" radius={[6, 6, 0, 0]} maxBarSize={48} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -122,7 +122,7 @@ function PerformanceBody({ data }: { data: AnalyticsAnalysis }) {
       </div>
 
       <section className="card space-y-4 p-5">
-        <h2 className="text-base font-semibold">Dated observations</h2>
+        <h2 className="text-base font-semibold">Views over time</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="text-sm text-slate-700">
             Video
@@ -145,18 +145,19 @@ function PerformanceBody({ data }: { data: AnalyticsAnalysis }) {
         </div>
         {series.filter((row) => row.views !== null).length < 2 ? (
           <p className="text-sm leading-6 text-slate-600">
-            This filter has fewer than two dated view counts, so no trend line is drawn. A single row is a snapshot, not growth over time.
+            Not enough data yet: there are fewer than two dated view counts here, so we can't draw a trend line. One row
+            is just a snapshot, not change over time.
           </p>
         ) : (
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="observed_at" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} width={64} tickFormatter={(value: number) => formatNumber(value)} />
+                <CartesianGrid stroke="#E4E2EE" vertical={false} />
+                <XAxis dataKey="observed_at" tick={{ fill: "#4D535D", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#4D535D", fontSize: 12 }} axisLine={false} tickLine={false} width={64} tickFormatter={(value: number) => formatNumber(value)} />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="views" name="Views" stroke="#4f46e5" strokeWidth={2} dot connectNulls={false} />
+                <Line type="monotone" dataKey="views" name="Views" stroke="#5848D2" strokeWidth={2} dot connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -168,7 +169,7 @@ function PerformanceBody({ data }: { data: AnalyticsAnalysis }) {
         message={data.prediction.message}
         limitations={data.prediction.limitations}
         series={data.prediction.series}
-        method={data.prediction.method}
+        method={data.prediction.model_label ?? data.prediction.method}
       />
 
       <PerformanceDiagnosisPanel
@@ -179,21 +180,21 @@ function PerformanceBody({ data }: { data: AnalyticsAnalysis }) {
 
       {data.narrative ? (
         <section className="card space-y-4 p-5">
-          <h2 className="text-base font-semibold">Suggestions</h2>
+          <h2 className="text-base font-semibold">AI suggestions</h2>
           <p className="text-sm leading-6 text-slate-700">{data.narrative.executive_summary}</p>
-          <h3 className="text-sm font-semibold">Strengths</h3>
+          <h3 className="text-sm font-semibold">What works well</h3>
           <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
             {data.narrative.strengths.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
-          <h3 className="text-sm font-semibold">Improvements</h3>
+          <h3 className="text-sm font-semibold">What could be better</h3>
           <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
             {data.narrative.weaknesses.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
-          <h3 className="text-sm font-semibold">Next actions</h3>
+          <h3 className="text-sm font-semibold">What to try next</h3>
           <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
             {data.narrative.next_actions.map((item) => (
               <li key={item}>{item}</li>
@@ -207,11 +208,11 @@ function PerformanceBody({ data }: { data: AnalyticsAnalysis }) {
           </ul>
           <p className="text-sm text-slate-600">{data.narrative.additional_data}</p>
           <p className="text-xs text-slate-500">{data.narrative.limitations}</p>
-          {data.model ? <p className="text-xs text-slate-500">Suggestion model: {data.model}</p> : null}
+          {data.model ? <p className="text-xs text-slate-500">Written by AI ({data.model})</p> : null}
         </section>
       ) : (
         <section className="card border-amber-200 bg-amber-50 p-5" role="status">
-          <h2 className="text-base font-semibold text-amber-950">Suggestions unavailable</h2>
+          <h2 className="text-base font-semibold text-amber-950">AI suggestions not available</h2>
           <p className="mt-2 text-sm leading-6 text-amber-950">{data.narrative_message}</p>
         </section>
       )}

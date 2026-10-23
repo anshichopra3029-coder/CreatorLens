@@ -65,7 +65,7 @@ export function DocumentResults({ documentId }: { documentId: string }) {
       setQuestion("");
       reload();
     } catch (error: unknown) {
-      setAskError(error instanceof Error ? error.message : "The question could not be answered.");
+      setAskError(error instanceof Error ? error.message : "We couldn't answer that question. Please try again.");
     } finally {
       setAsking(false);
     }
@@ -74,9 +74,9 @@ export function DocumentResults({ documentId }: { documentId: string }) {
   return (
     <QueryPanel
       query={query}
-      loadingLabel="Loading saved analysis"
+      loadingLabel="Loading your saved analysis…"
       emptyTitle="Analysis not found"
-      emptyBody="This saved analysis is no longer available."
+      emptyBody="This saved analysis isn't available any more."
       isEmpty={() => false}
     >
       {(data) => <AnalysisBody data={data} question={question} setQuestion={setQuestion} asking={asking} askError={askError} onAsk={onAsk} reload={query.reload} />}
@@ -113,7 +113,7 @@ function AnalysisBody({
           {data.format.toUpperCase()} · {formatBytes(data.size_bytes)} · Saved {data.created_at}
         </p>
         <p className="mt-3 text-sm leading-6 text-slate-700">{data.narrative_message}</p>
-        {data.file_saved ? <p className="mt-2 text-sm font-medium text-emerald-800">The file and analysis were saved.</p> : null}
+        {data.file_saved ? <p className="mt-2 text-sm font-medium text-emerald-800">Your file and its analysis are saved.</p> : null}
         <div className="mt-4 flex flex-wrap gap-3">
           <Link to="/upload" className="btn-secondary">
             Upload another document
@@ -123,6 +123,25 @@ function AnalysisBody({
           </Link>
         </div>
       </section>
+
+      {data.posts_dataset ? (
+        <section
+          className={`card p-5 ${data.posts_dataset.eligible ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}
+          role="status"
+        >
+          <h2 className="text-base font-semibold">
+            {data.posts_dataset.eligible
+              ? "Ready to train an engagement predictor"
+              : "Can't be used to train an engagement predictor yet"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-800">{data.posts_dataset.message}</p>
+          {data.posts_dataset.eligible ? (
+            <Link to="/predictions" className="btn-primary mt-3">
+              Train it on the Predictions page
+            </Link>
+          ) : null}
+        </section>
+      ) : null}
 
       {data.status === "unreadable" ? (
         <section className="card border-amber-200 bg-amber-50 p-5" role="status">
@@ -136,24 +155,25 @@ function AnalysisBody({
           <h2 className="text-base font-semibold">Summary</h2>
           {data.subject ? <p className="mt-2 text-sm font-medium text-slate-800">{data.subject}</p> : null}
           <p className="mt-3 text-sm leading-6 text-slate-700">{data.summary}</p>
-          {data.model ? <p className="mt-3 text-xs text-slate-500">Narrative model: {data.model}</p> : null}
+          {data.model ? <p className="mt-3 text-xs text-slate-500">Written by AI ({data.model})</p> : null}
         </section>
       ) : null}
 
       {profile?.engagement_available ? (
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Calculated summary">
-          <KpiCard label="Rows analyzed" value={formatNumber(profile.posts_analyzed ?? 0)} detail="Calculated from the uploaded CSV" />
-          <KpiCard label="Avg. engagement rate" value={formatRate(profile.avg_engagement_rate)} detail="Calculated with the view-based formula" />
-          <KpiCard label="Total interactions" value={formatNumber(profile.total_interactions ?? 0)} detail="Likes + comments + shares on rated rows" />
-          <KpiCard label="Best category" value={profile.best_category ?? "—"} detail="Highest calculated average rate" />
+          <KpiCard label="Rows analyzed" value={formatNumber(profile.posts_analyzed ?? 0)} detail="Posts counted from your CSV" />
+          <KpiCard label="Avg. engagement rate" value={formatRate(profile.avg_engagement_rate)} detail="On average, likes, comments, and shares compared with views" />
+          <KpiCard label="Total interactions" value={formatNumber(profile.total_interactions ?? 0)} detail="All likes, comments, and shares added up" />
+          <KpiCard label="Best category" value={profile.best_category ?? "—"} detail="The type of content with the most engagement" />
         </section>
       ) : null}
 
       {profile && !profile.engagement_available ? (
         <section className="card p-5">
-          <h2 className="text-base font-semibold">Dataset profile</h2>
+          <h2 className="text-base font-semibold">What's in your file</h2>
           <p className="mt-2 text-sm text-slate-600">
-            {formatNumber(profile.row_count)} rows and {formatNumber(profile.column_count)} columns. Statistics are calculated in Python.
+            {formatNumber(profile.row_count)} rows and {formatNumber(profile.column_count)} columns. For each column you
+            can see what kind of data it holds, how many cells are empty, and the average (for numbers).
           </p>
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -162,8 +182,8 @@ function AnalysisBody({
                 <tr>
                   <th className="py-2 pr-4 font-medium">Column</th>
                   <th className="py-2 pr-4 font-medium">Type</th>
-                  <th className="py-2 pr-4 font-medium">Missing</th>
-                  <th className="py-2 pr-4 font-medium">Mean</th>
+                  <th className="py-2 pr-4 font-medium">Empty cells</th>
+                  <th className="py-2 pr-4 font-medium">Average</th>
                 </tr>
               </thead>
               <tbody>
@@ -186,20 +206,20 @@ function AnalysisBody({
           {trends.length > 0 ? (
             <div className="card p-5 lg:col-span-3">
               <h2 className="text-base font-semibold">Engagement over time</h2>
-              <p className="mb-4 mt-1 text-sm text-slate-500">Weekly average calculated from the uploaded rows.</p>
+              <p className="mb-4 mt-1 text-sm text-slate-500">Average engagement for each week, from your file.</p>
               <EngagementTrendChart
                 points={trends}
-                caption="Weekly averages calculated from the uploaded CSV."
+                caption="Each point is one week's average from your CSV."
               />
             </div>
           ) : null}
           {categories.length > 0 ? (
             <div className="card p-5 lg:col-span-2">
               <h2 className="text-base font-semibold">Category comparison</h2>
-              <p className="mb-4 mt-1 text-sm text-slate-500">Average rate calculated by category.</p>
+              <p className="mb-4 mt-1 text-sm text-slate-500">Average engagement for each type of content.</p>
               <CategoryComparisonChart
                 categories={categories}
-                caption="Category rates calculated from the uploaded CSV."
+                caption="Worked out from the categories in your CSV."
               />
             </div>
           ) : null}
@@ -224,14 +244,14 @@ function AnalysisBody({
         <BulletList title="Key findings" items={data.key_findings} />
         <BulletList title="Facts and figures" items={data.facts} />
         <BulletList title="Dates" items={data.dates} />
-        <BulletList title="Entities" items={data.entities} />
+        <BulletList title="People, brands, and places" items={data.entities} />
         <BulletList title="Risks and issues" items={data.risks} />
         <BulletList title="Recommendations" items={data.recommendations} />
       </div>
 
       {data.text_preview ? (
         <section className="card p-5">
-          <h2 className="text-base font-semibold">Extracted text</h2>
+          <h2 className="text-base font-semibold">Text we read from your file</h2>
           <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap text-sm leading-6 text-slate-700">{data.text_preview}</pre>
         </section>
       ) : null}
@@ -239,7 +259,7 @@ function AnalysisBody({
       <section className="card p-5">
         <h2 className="text-base font-semibold">Ask about this document</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Questions are answered from the saved text. If the answer is not in the document, the response should say so.
+          Ask anything about this file. Answers only use what's written in it, and will say so if the answer isn't there.
         </p>
         <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={(event) => onAsk(event, reload)}>
           <label className="sr-only" htmlFor="document-question">
@@ -268,7 +288,7 @@ function AnalysisBody({
             <article key={item.id} className="rounded-lg border border-slate-200 p-4">
               <h3 className="text-sm font-semibold">{item.question}</h3>
               <p className="mt-2 text-sm leading-6 text-slate-700">{item.answer}</p>
-              <p className="mt-2 text-sm text-slate-600">Evidence: {item.cited_evidence}</p>
+              <p className="mt-2 text-sm text-slate-600">From your file: {item.cited_evidence}</p>
               <p className="mt-1 text-sm text-slate-500">{item.uncertainty_note}</p>
             </article>
           ))}

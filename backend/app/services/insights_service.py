@@ -14,9 +14,9 @@ from app.core.metrics import METRIC_FORMULA, METRIC_NAME
 from app.services.demo_dataset import DemoQuery, group_metrics, select_demo_posts
 
 DISCLAIMER = (
-    "These cards are calculated from the built-in demo dataset so the interface "
-    "can be reviewed before a real analysis pipeline exists. They are illustrative, "
-    "they are not causal findings, and they do not describe a file you upload in this phase."
+    "These cards come from the built-in demo dataset, so you can see what insights look like. "
+    "They are examples only. They are not causal findings (they don't prove what caused a result), "
+    "and they don't describe your own uploads."
 )
 
 

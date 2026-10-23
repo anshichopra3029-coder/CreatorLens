@@ -3,7 +3,7 @@ import { applyXhrSession, noteUnauthorized, sessionHeaders } from "./session.ts"
 import type { DocumentAnalysis, DocumentListResponse } from "../types/documents.ts";
 
 function unavailableMessage(): string {
-  return `The API is unavailable at ${apiBaseUrl()}. Start the backend and try again.`;
+  return `CreatorLens can't reach its server${apiBaseUrl() ? ` at ${apiBaseUrl()}` : ""}. Start the backend and try again.`;
 }
 
 function detailMessage(payload: unknown, fallback: string): string {
@@ -32,7 +32,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     noteUnauthorized();
   }
   if (!response.ok) {
-    throw new ApiError(response.status, detailMessage(payload, `Request failed (${response.status}).`));
+    throw new ApiError(response.status, detailMessage(payload, `Something went wrong on the server (${response.status}). Please try again.`));
   }
   return payload as T;
 }
@@ -73,7 +73,7 @@ export function uploadDocument(file: File, onProgress: (percent: number) => void
         try {
           payload = JSON.parse(requestBody.responseText) as unknown;
         } catch {
-          reject(new ApiError(requestBody.status, "The server returned a response that was not JSON."));
+          reject(new ApiError(requestBody.status, "The server sent back an answer we couldn't read. Please try again."));
           return;
         }
       }
@@ -84,7 +84,7 @@ export function uploadDocument(file: File, onProgress: (percent: number) => void
         resolve(payload as DocumentAnalysis);
         return;
       }
-      reject(new ApiError(requestBody.status, detailMessage(payload, `Upload failed (${requestBody.status}).`)));
+      reject(new ApiError(requestBody.status, detailMessage(payload, `The upload didn't work (${requestBody.status}). Please try again.`)));
     };
     const form = new FormData();
     form.append("file", file);

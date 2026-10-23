@@ -15,7 +15,7 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
       <div className="flex items-start gap-3">
         <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-700" aria-hidden="true" />
         <div>
-          <p className="font-medium text-red-950">This data could not be loaded</p>
+          <p className="font-medium text-red-950">We couldn't load this</p>
           <p className="mt-1 text-sm text-red-900">{message}</p>
           {onRetry ? (
             <button type="button" className="btn-secondary mt-3 bg-white" onClick={onRetry}>

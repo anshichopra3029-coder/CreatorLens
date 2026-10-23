@@ -52,14 +52,14 @@ function AnalyticsDemo() {
   return (
     <div className="space-y-6">
       <DemoBanner>
-        Filters reload demo figures from the API. They do not analyze an uploaded file in this phase.
+        These filters work on the built-in demo data. Open one of your saved files to see your own numbers here.
       </DemoBanner>
 
       <QueryPanel
         query={catalog}
-        loadingLabel="Loading demo filter options"
+        loadingLabel="Loading filter options…"
         emptyTitle="No demo posts to filter"
-        emptyBody="The demo dataset did not return any posts, so there are no categories or platforms to choose."
+        emptyBody="The demo data didn't return any posts, so there are no categories or platforms to choose."
         isEmpty={(data) => data.posts.length === 0}
       >
         {() => (
@@ -114,7 +114,7 @@ function AnalyticsDemo() {
                   </label>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-slate-500">Counted back from today using each post date.</p>
+              <p className="mt-2 text-xs text-slate-500">Counted back from today, using the date each post went live.</p>
             </fieldset>
             <div className="md:col-span-3">
               <button type="button" className="btn-secondary" onClick={resetFilters}>
@@ -128,7 +128,7 @@ function AnalyticsDemo() {
       <div aria-busy={summary.status === "loading"}>
         <QueryPanel
           query={summary}
-          loadingLabel="Loading filtered demo summary"
+          loadingLabel="Loading the filtered summary…"
           emptyTitle="No demo posts match these filters"
           emptyBody="Try a wider time range, or reset the category and platform."
           isEmpty={(data) => data.posts_analyzed === 0}
@@ -136,10 +136,10 @@ function AnalyticsDemo() {
           {(data) => (
             <div className="space-y-3">
               <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Filtered demo summary">
-                <KpiCard label="Posts" value={formatNumber(data.posts_analyzed)} detail="Demo data · posts in this filter" />
-                <KpiCard label="Avg. engagement rate" value={formatRate(data.avg_engagement_rate)} detail="Demo data · mean of per-post rates" />
-                <KpiCard label="Total interactions" value={formatNumber(data.total_interactions)} detail="Demo data · likes + comments + shares" />
-                <KpiCard label="Best category" value={data.best_category ?? "—"} detail="Demo data · highest average rate in this filter" />
+                <KpiCard label="Posts" value={formatNumber(data.posts_analyzed)} detail="Demo data · posts that match your filters" />
+                <KpiCard label="Avg. engagement rate" value={formatRate(data.avg_engagement_rate)} detail="Demo data · average engagement across these posts" />
+                <KpiCard label="Total interactions" value={formatNumber(data.total_interactions)} detail="Demo data · all likes, comments, and shares added up" />
+                <KpiCard label="Best category" value={data.best_category ?? "—"} detail="Demo data · the type of content with the most engagement here" />
               </section>
               <MetricCaption formula={data.metric_formula} />
             </div>
@@ -152,9 +152,9 @@ function AnalyticsDemo() {
           <h2 className="mb-4 text-base font-semibold">Trend</h2>
           <QueryPanel
             query={trends}
-            loadingLabel="Loading filtered trend"
-            emptyTitle="No trend for this filter"
-            emptyBody="None of the demo posts in this filter have a date to chart."
+            loadingLabel="Loading the trend…"
+            emptyTitle="No trend for these filters"
+            emptyBody="None of the demo posts that match have a date to chart."
             isEmpty={(data) => data.points.length === 0}
           >
             {(data) => <EngagementTrendChart points={data.points} />}
@@ -164,9 +164,9 @@ function AnalyticsDemo() {
           <h2 className="mb-4 text-base font-semibold">Content type</h2>
           <QueryPanel
             query={comparison}
-            loadingLabel="Loading filtered comparison"
-            emptyTitle="No categories for this filter"
-            emptyBody="None of the demo posts in this filter have a category to compare."
+            loadingLabel="Loading the comparison…"
+            emptyTitle="No categories for these filters"
+            emptyBody="None of the demo posts that match have a category to compare."
             isEmpty={(data) => data.categories.length === 0}
           >
             {(data) => <CategoryComparisonChart categories={data.categories} />}
@@ -178,9 +178,9 @@ function AnalyticsDemo() {
         <h2 className="mb-4 text-base font-semibold">Posts in this filter</h2>
         <QueryPanel
           query={posts}
-          loadingLabel="Loading filtered posts"
-          emptyTitle="No posts in this filter"
-          emptyBody="Reset the filters to see the full demo dataset."
+          loadingLabel="Loading posts…"
+          emptyTitle="No posts match these filters"
+          emptyBody="Reset the filters to see all the demo posts."
           isEmpty={(data) => data.posts.length === 0}
         >
           {(data) => <PostsTable posts={data.posts} caption="Demo posts matching the selected filters" />}

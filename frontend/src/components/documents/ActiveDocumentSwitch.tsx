@@ -44,7 +44,7 @@ function OwnedDocument({ id, demo }: { id: string; demo: ReactNode }) {
       return demo;
     }
     return (
-      <p className="text-sm text-red-700" role="alert">
+      <p className="card border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
         {query.error}
       </p>
     );
@@ -53,7 +53,7 @@ function OwnedDocument({ id, demo }: { id: string; demo: ReactNode }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-slate-600">These results come from your saved document, not the demo dataset.</p>
+        <p className="text-sm text-slate-600">You're seeing results from your own saved file, not the demo data.</p>
         <button type="button" className="btn-secondary" onClick={clearActiveDocumentId}>
           Show demo data
         </button>

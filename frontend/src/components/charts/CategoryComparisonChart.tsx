@@ -13,8 +13,8 @@ export function CategoryComparisonChart({
   const caption =
     captionOverride ??
     (leader
-      ? `${leader.name} leads this demo comparison at ${formatRate(leader.avg_engagement_rate)} across ${leader.post_count} posts.`
-      : "No category rate is available.");
+      ? `${leader.name} gets the most engagement in the demo data: ${formatRate(leader.avg_engagement_rate)} across ${leader.post_count} posts.`
+      : "There's no engagement to compare yet.");
 
   return (
     <figure>
@@ -22,10 +22,10 @@ export function CategoryComparisonChart({
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={categories} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="#e2e8f0" vertical={false} />
+            <CartesianGrid stroke="#E4E2EE" vertical={false} />
             <XAxis
               dataKey="name"
-              tick={{ fill: "#64748b", fontSize: 11 }}
+              tick={{ fill: "#4D535D", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               interval={0}
@@ -34,7 +34,7 @@ export function CategoryComparisonChart({
               height={68}
             />
             <YAxis
-              tick={{ fill: "#64748b", fontSize: 12 }}
+              tick={{ fill: "#4D535D", fontSize: 12 }}
               axisLine={false}
               tickLine={false}
               width={48}
@@ -43,7 +43,7 @@ export function CategoryComparisonChart({
             <Tooltip
               formatter={(value) => [formatRate(typeof value === "number" ? value : null), "Engagement rate"]}
             />
-            <Bar dataKey="avg_engagement_rate" name="Engagement rate" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={48} />
+            <Bar dataKey="avg_engagement_rate" name="Engagement rate" fill="#5848D2" radius={[6, 6, 0, 0]} maxBarSize={48} />
           </BarChart>
         </ResponsiveContainer>
       </div>

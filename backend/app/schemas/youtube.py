@@ -27,9 +27,8 @@ class PublicStatistics(BaseModel):
     engagement_rate: float | None = None
     engagement_formula: str = "(likes + comments) / views * 100"
     engagement_note: str = (
-        "Public YouTube engagement uses likes and comments only. "
-        "Shares are not in the public video statistics. "
-        "A hidden count stays unavailable and is not treated as zero."
+        "For YouTube videos, engagement counts likes and comments only, because YouTube doesn't show shares publicly. "
+        "If a count is hidden, we leave it blank instead of counting it as zero."
     )
 
 
@@ -104,8 +103,8 @@ class YoutubePreview(BaseModel):
     cached: bool
     views_per_day: float | None = None
     views_per_day_note: str = (
-        "Views per day = public view count / days since publication. "
-        "It is an average over the video's public life, not a recent daily trend."
+        "Total views divided by the number of days since the video went live. "
+        "It's an average over the video's whole life, not how many views it gets per day right now."
     )
     is_demo: Literal[False] = False
 
@@ -121,12 +120,12 @@ class YoutubeAnalysisResponse(BaseModel):
     comments: list[CommentSnippet] = Field(default_factory=list)
     views_per_day: float | None = None
     views_per_day_note: str = (
-        "Views per day = public view count / days since publication. "
-        "It is an average over the video's public life, not a recent daily trend."
+        "Total views divided by the number of days since the video went live. "
+        "It's an average over the video's whole life, not how many views it gets per day right now."
     )
     prediction: PredictionResult = Field(
         default_factory=lambda: insufficient_prediction(
-            "No forecast was stored with this analysis. A single public snapshot is not a trained model."
+            "No forecast was saved with this analysis. One snapshot of views isn't enough to predict anything."
         )
     )
     warnings: list[str] = Field(default_factory=list)
@@ -134,7 +133,7 @@ class YoutubeAnalysisResponse(BaseModel):
     narrative_message: str
     narrative: YoutubeNarrative | None = None
     diagnosis_status: Literal["generated", "calculated", "unavailable"] = "unavailable"
-    diagnosis_message: str = "No performance diagnosis was stored with this analysis."
+    diagnosis_message: str = "No performance check was saved with this analysis."
     diagnosis: PerformanceDiagnosis | None = None
     diagnosis_evidence: DiagnosisEvidence | None = None
     roasts: dict[str, VideoRoast] = Field(default_factory=dict)

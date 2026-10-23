@@ -14,10 +14,10 @@ class YoutubeUrlError(Exception):
 def parse_youtube_video_id(value: str) -> str:
     text = value.strip()
     if text == "" or len(text) > 500:
-        raise YoutubeUrlError("Paste a YouTube video URL.")
+        raise YoutubeUrlError("Paste a YouTube video link.")
     parsed = urlparse(text)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise YoutubeUrlError("Paste a full http or https YouTube URL.")
+        raise YoutubeUrlError("Paste the full YouTube link, starting with https://")
     host = parsed.hostname.lower().removeprefix("www.")
     video_id = ""
     if host in {"youtube.com", "m.youtube.com", "music.youtube.com"}:
@@ -27,13 +27,13 @@ def parse_youtube_video_id(value: str) -> str:
         elif parts and parts[0] in {"shorts", "embed", "live"} and len(parts) >= 2:
             video_id = parts[1]
         else:
-            raise YoutubeUrlError("That YouTube URL does not point at one video.")
+            raise YoutubeUrlError("That YouTube link doesn't point to a single video.")
     elif host == "youtu.be":
         video_id = parsed.path.strip("/").split("/")[0]
     else:
-        raise YoutubeUrlError("Only YouTube watch, youtu.be, Shorts, embed, and live URLs are supported.")
+        raise YoutubeUrlError("That doesn't look like a YouTube video link. Copy the link from the video's Share button.")
     if not _valid_video_id(video_id):
-        raise YoutubeUrlError("That URL does not contain a valid YouTube video ID.")
+        raise YoutubeUrlError("That link doesn't seem to contain a valid YouTube video. Please check it and try again.")
     return video_id
 
 

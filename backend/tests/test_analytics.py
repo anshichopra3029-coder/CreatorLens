@@ -89,8 +89,9 @@ def test_daily_file_trains_a_forecast_and_survives_gemini_failure(member, isolat
     saved = analyze_upload(_daily(), "daily.csv", user_id=user_id, client=_Client())
     assert saved.summary.average_engagement_rate == 11.0
     assert saved.prediction.trained is True
-    assert saved.prediction.method == "linear_regression"
-    assert saved.prediction.holdout_start == "2026-01-09"
+    assert saved.prediction.method == "holt_linear"
+    assert saved.prediction.selection == "evaluated"
+    assert saved.prediction.holdout_start is not None
     assert saved.narrative_status == "unavailable"
     assert saved.narrative is None
     assert SECRET not in saved.model_dump_json()

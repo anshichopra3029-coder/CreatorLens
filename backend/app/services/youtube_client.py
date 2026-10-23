@@ -16,16 +16,16 @@ from app.services.youtube_urls import canonical_watch_url
 Extractor = Callable[[str], dict[str, Any]]
 
 TRANSCRIPT_REASON = (
-    "No transcript was retrieved. Metadata extraction does not watch the video "
-    "or download captions."
+    "We didn't get the video's spoken words (transcript). CreatorLens only reads the video's public details. "
+    "It doesn't watch the video or download captions."
 )
 ANALYTICS_REASON = (
-    "Impressions, click-through rate, and audience retention require the creator's "
-    "YouTube Analytics authorization. That connection is not set up, so no retention curve is stored."
+    "Impressions (how often YouTube showed the video), click-through rate (how often people clicked), and "
+    "audience retention (how long people kept watching) need access to the creator's own YouTube Analytics. "
+    "That connection isn't set up, so these numbers aren't shown."
 )
 COMMENT_TEXT_REASON = (
-    "Comment text was not retrieved. Metadata extraction records a comment count "
-    "only when the extractor returns one."
+    "We didn't read the text of the comments. We only keep the number of comments when YouTube shows it."
 )
 RESTRICTED = {"private", "needs_auth", "premium_only", "subscriber_only", "login_required"}
 
@@ -111,15 +111,15 @@ def _from_exception(exc: Exception) -> YoutubeApiError:
     if "sign in to confirm" in text or "not a bot" in text:
         return YoutubeApiError(
             503,
-            "YouTube blocked the metadata request with a sign-in check. No new statistics were saved.",
+            "YouTube asked for a sign-in check before sharing this video's details, so nothing new was saved. Please try again later.",
         )
     if any(word in text for word in ("private", "unavailable", "removed", "deleted", "not available")):
-        return YoutubeApiError(404, "That video is private, deleted, or unavailable. No statistics were saved.")
+        return YoutubeApiError(404, "That video is private, deleted, or unavailable, so nothing was saved.")
     if any(word in text for word in ("429", "rate-limit", "rate limit", "too many")):
-        return YoutubeApiError(429, "YouTube rate-limited the metadata request. No new statistics were retrieved.")
+        return YoutubeApiError(429, "YouTube is getting too many requests right now. Please wait a little and try again.")
     if any(word in text for word in ("timed out", "timeout", "network", "connection", "temporary failure")):
-        return YoutubeApiError(504, "The metadata request timed out. No statistics were saved.")
-    return YoutubeApiError(502, "Metadata extraction failed. No statistics were saved.")
+        return YoutubeApiError(504, "YouTube took too long to answer (timed out), so nothing was saved. Please try again.")
+    return YoutubeApiError(502, "We couldn't read this video's details from YouTube, so nothing was saved.")
 
 
 def _metadata(video_id: str, info: dict[str, Any]) -> VideoMetadata:
@@ -128,7 +128,7 @@ def _metadata(video_id: str, info: dict[str, Any]) -> VideoMetadata:
         raise YoutubeApiError(502, "The extractor returned a different video than the URL.")
     availability = str(info.get("availability") or "public")
     if availability in RESTRICTED:
-        raise YoutubeApiError(404, "That video is not public, so its statistics were not analysed.")
+        raise YoutubeApiError(404, "That video isn't public, so we can't analyse it.")
     categories = info.get("categories") if isinstance(info.get("categories"), list) else []
     tags = info.get("tags") if isinstance(info.get("tags"), list) else []
     category = str(categories[0])[:80] if categories else None

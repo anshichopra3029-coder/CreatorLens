@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.analytics_routes import router as analytics_router
 from app.api.auth_routes import router as auth_router
 from app.api.document_routes import router as document_router
+from app.api.prediction_routes import router as prediction_router
 from app.api.youtube_routes import router as youtube_router
 from app.api.routes import router
 from app.api.video_routes import router as video_router
@@ -36,6 +37,7 @@ app.include_router(video_router, prefix="/api")
 app.include_router(document_router, prefix="/api")
 app.include_router(youtube_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api")
+app.include_router(prediction_router, prefix="/api")
 
 
 @app.get("/", tags=["health"])
@@ -47,5 +49,6 @@ def service_index() -> dict[str, str]:
         "documents": "/api/documents",
         "youtube": "/api/youtube/analyses",
         "analytics_csv": "/api/analytics/analyses",
+        "engagement_models": "/api/predictions/models",
         "docs": "/docs",
     }

@@ -51,7 +51,7 @@ export function YoutubePage() {
       setPhase("ready");
     } catch (caught: unknown) {
       setPhase("idle");
-      setError(caught instanceof Error ? caught.message : "The video preview failed.");
+      setError(caught instanceof Error ? caught.message : "We couldn't preview that video. Please try again.");
     }
   }
 
@@ -70,7 +70,7 @@ export function YoutubePage() {
       navigate(`/youtube/${savedAnalysis.id}`);
     } catch (caught: unknown) {
       setPhase(preview ? "ready" : "idle");
-      setError(caught instanceof Error ? caught.message : "The analysis failed.");
+      setError(caught instanceof Error ? caught.message : "We couldn't analyze that video. Please try again.");
     }
   }
 
@@ -102,7 +102,7 @@ export function YoutubePage() {
       navigate(`/performance/${savedFile.id}`);
     } catch (caught: unknown) {
       setFilePhase(filePreview ? "ready" : "idle");
-      setFileError(caught instanceof Error ? caught.message : "The file analysis failed.");
+      setFileError(caught instanceof Error ? caught.message : "We couldn't analyze that file. Please try again.");
     }
   }
 
@@ -112,8 +112,8 @@ export function YoutubePage() {
   return (
     <div className="space-y-6">
       <p className="max-w-2xl text-sm leading-6 text-slate-600">
-        Paste a public YouTube watch, youtu.be, Shorts, or embed URL. The server reads public metadata with yt-dlp.
-        It does not download the video.
+        Paste a link to any public YouTube video (including Shorts). We read the video's public details, like its
+        title, views, likes, and comments. We don't download the video.
       </p>
 
       <form
@@ -125,7 +125,7 @@ export function YoutubePage() {
       >
         <div>
           <label className="field-label" htmlFor="youtube-url">
-            YouTube URL
+            YouTube video link
           </label>
           <input
             id="youtube-url"
@@ -152,12 +152,12 @@ export function YoutubePage() {
         </div>
         {phase === "previewing" ? (
           <p className="text-sm text-slate-600" role="status">
-            Requesting the public title, channel, duration, and statistics.
+            Getting the video's title, channel, length, and public numbers…
           </p>
         ) : null}
         {phase === "analyzing" ? (
           <p className="text-sm text-slate-600" role="status">
-            Saving public statistics and requesting a written analysis when Gemini is configured.
+            Saving the video's numbers and asking the AI for a written review. This can take a little while…
           </p>
         ) : null}
         {error ? (
@@ -178,12 +178,12 @@ export function YoutubePage() {
               <h2 className="mt-2 text-lg font-semibold">{preview.metadata.title}</h2>
               <p className="mt-2 text-sm text-slate-600">
                 {preview.metadata.channel_title} · {formatDuration(preview.metadata.duration_seconds)}
-                {preview.cached ? " · cached metadata" : ""}
+                {preview.cached ? " · details saved earlier" : ""}
               </p>
               <p className="mt-2 text-sm text-slate-700">
                 Views {preview.statistics.views === null ? "unavailable" : formatNumber(preview.statistics.views)} · Likes{" "}
                 {preview.statistics.likes === null ? "unavailable" : formatNumber(preview.statistics.likes)} · Comments{" "}
-                {preview.statistics.comments === null ? "unavailable" : formatNumber(preview.statistics.comments)} · Rate{" "}
+                {preview.statistics.comments === null ? "unavailable" : formatNumber(preview.statistics.comments)} · Engagement{" "}
                 {formatRate(preview.statistics.engagement_rate)}
               </p>
             </div>
@@ -193,19 +193,20 @@ export function YoutubePage() {
       ) : null}
 
       <section className="card p-5">
-        <h2 className="text-base font-semibold">Creator analytics</h2>
+        <h2 className="text-base font-semibold">Your YouTube Studio numbers</h2>
         {oauth.status === "success" ? (
           <p className="mt-2 text-sm leading-6 text-slate-600">{oauth.data.reason}</p>
         ) : (
-          <p className="mt-2 text-sm text-slate-600">Checking whether a creator YouTube account is connected.</p>
+          <p className="mt-2 text-sm text-slate-600">Checking whether your YouTube account is connected…</p>
         )}
       </section>
 
       <section className="card space-y-4 p-5">
-        <h2 className="text-base font-semibold">Upload creator analytics</h2>
+        <h2 className="text-base font-semibold">Upload your analytics (CSV)</h2>
         <p className="text-sm leading-6 text-slate-600">
-          Use a CSV with a video ID or title, and views, likes, or comments. Dates, shares, impressions, click-through
-          rate, watch time, and subscribers are used when those columns are present.
+          Upload a CSV exported from YouTube Studio or a spreadsheet. It needs a video ID or title, plus views, likes, or
+          comments. If your file also has dates, shares, impressions, click-through rate, watch time, or subscribers,
+          we'll use those too.
         </p>
         <input
           className="block text-sm"
@@ -269,9 +270,9 @@ export function YoutubePage() {
         <h2 className="text-base font-semibold">Previous analytics files</h2>
         <QueryPanel
           query={uploads}
-          loadingLabel="Loading analytics files"
+          loadingLabel="Loading your analytics files…"
           emptyTitle="No analytics files yet"
-          emptyBody="Preview a CSV and then analyze it to save the metrics."
+          emptyBody="Choose a CSV, click Preview file, then Analyze file to save it here."
           isEmpty={(data) => data.analyses.length === 0}
         >
           {(data) => (
@@ -298,9 +299,9 @@ export function YoutubePage() {
         <h2 className="text-base font-semibold">Previous video analyses</h2>
         <QueryPanel
           query={saved}
-          loadingLabel="Loading previous video analyses"
+          loadingLabel="Loading your previous video analyses…"
           emptyTitle="No video analyses yet"
-          emptyBody="A saved analysis appears here after you start one from a public video URL."
+          emptyBody="Paste a public video link above and click Analyze Video. Your analysis will appear here."
           isEmpty={(data) => data.analyses.length === 0}
         >
           {(data) => (

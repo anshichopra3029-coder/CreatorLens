@@ -1,3 +1,5 @@
+import type { PostsDatasetCheck } from "./engagement.ts";
+
 export type DocumentFormat = "csv" | "pdf" | "docx";
 export type DocumentStatus = "analyzed" | "extracted" | "unreadable";
 export type NarrativeStatus = "generated" | "unavailable" | "not_requested";
@@ -85,6 +87,7 @@ export interface DocumentAnalysis {
   recommendations: string[];
   text_preview: string;
   csv_profile: CsvProfile | null;
+  posts_dataset?: PostsDatasetCheck | null;
   questions: QuestionRecord[];
   model: string | null;
 }

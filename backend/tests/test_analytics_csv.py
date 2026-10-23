@@ -52,7 +52,7 @@ def test_latest_row_engagement_and_forecast_are_saved(member, isolated):
     assert body["summary"]["average_engagement_rate"] == 11.0
     assert body["summary"]["engagement_formula"] == "(likes + comments) / views * 100"
     assert body["prediction"]["trained"] is True
-    assert body["prediction"]["method"] == "linear_regression"
+    assert body["prediction"]["method"] == "holt_linear"
     assert body["narrative"] is None
     saved = member.get(f"/api/analytics/analyses/{body['id']}")
     assert saved.status_code == 200

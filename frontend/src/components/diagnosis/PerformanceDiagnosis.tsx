@@ -8,10 +8,21 @@ const PRIORITY_CLASS = {
 } as const;
 
 const CLAIM_LABEL = {
-  observed: "Observed fact",
-  inference: "Inference",
-  hypothesis: "Hypothesis",
+  observed: "Fact from your numbers",
+  inference: "Likely, based on a comparison",
+  hypothesis: "Possible reason (a guess)",
 } as const;
+
+const LEVEL_HINT: Record<string, string> = {
+  "Limited evidence": "Based on very little data so far, so treat this as a first look.",
+  "Moderate evidence": "Based on some saved data. Useful, but more data would help.",
+  "Stronger evidence": "Based on plenty of saved data, so you can lean on it more.",
+};
+
+function levelText(level: string): string {
+  const hint = LEVEL_HINT[level];
+  return hint ? `${level}: ${hint}` : level;
+}
 
 export function PerformanceDiagnosisPanel({
   diagnosis,
@@ -34,19 +45,19 @@ export function PerformanceDiagnosisPanel({
             AI Performance Diagnosis
           </h2>
           <p className="mt-1 text-sm leading-6 text-slate-600">
-            Understand what's working, identify opportunities, and discover your next best move.
+            See what's working, what could be better, and what to try next.
           </p>
         </div>
         {onRetry ? (
           <button type="button" className="btn-secondary" onClick={onRetry} disabled={retrying}>
-            {retrying ? "Updating the diagnosis…" : "Retry diagnosis"}
+            {retrying ? "Updating…" : "Run the check again"}
           </button>
         ) : null}
       </div>
 
       {retrying ? (
         <p className="text-sm text-slate-600" role="status">
-          Updating the diagnosis…
+          Getting fresh numbers and updating the check…
         </p>
       ) : null}
 
@@ -59,11 +70,11 @@ export function PerformanceDiagnosisPanel({
         </>
       ) : (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4" role="status">
-          <h3 className="text-sm font-semibold text-amber-950">Diagnosis unavailable</h3>
+          <h3 className="text-sm font-semibold text-amber-950">Check-up not available</h3>
           <p className="mt-2 text-sm leading-6 text-amber-950">{message}</p>
           {evidence ? (
             <div className="mt-4">
-              <h4 className="text-sm font-semibold text-slate-800">Measured evidence</h4>
+              <h4 className="text-sm font-semibold text-slate-800">What we measured</h4>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">
                 {evidence.observations.map((item) => (
                   <li key={item}>{item}</li>
@@ -72,7 +83,7 @@ export function PerformanceDiagnosisPanel({
             </div>
           ) : (
             <p className="mt-2 text-sm leading-6 text-amber-950">
-              This saved analysis has no calculated diagnosis evidence yet.
+              This saved analysis doesn't have any measured numbers for a check-up yet.
             </p>
           )}
         </div>
@@ -84,9 +95,10 @@ export function PerformanceDiagnosisPanel({
 function EvidenceNote({ evidence }: { evidence: DiagnosisEvidence }) {
   return (
     <div className="rounded-lg bg-slate-50 p-4">
-      <p className="text-sm font-semibold text-slate-800">{evidence.evidence_level}</p>
+      <p className="text-sm font-semibold text-slate-800">{levelText(evidence.evidence_level)}</p>
       <p className="mt-1 text-xs leading-5 text-slate-500">
-        Engagement rate by views uses {evidence.engagement_formula}. This is a calculated rate, not YouTube's official analytics metric.
+        Engagement shows how many people liked or commented compared with how many viewed. It's our own calculation
+        ({evidence.engagement_formula}), not an official YouTube number.
       </p>
       <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">
         {evidence.evidence_reasons.map((item) => (
@@ -101,48 +113,48 @@ function DiagnosisBody({ diagnosis }: { diagnosis: Diagnosis }) {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-sm font-semibold">Performance summary</h3>
+        <h3 className="text-sm font-semibold">In short</h3>
         <p className="mt-2 text-sm leading-6 text-slate-700">{diagnosis.summary}</p>
       </div>
       <InsightGrid
         title="What's working"
-        empty="No measured strength is available for this evidence."
+        empty="Nothing stands out as a clear strength in the numbers we have yet."
         items={diagnosis.strengths.map((item) => (
           <article key={`${item.title}-${item.evidence}`} className="rounded-lg border border-slate-200 p-4">
             <ClaimBadge kind={item.claim_kind} />
             <h4 className="mt-2 text-sm font-semibold">{item.title}</h4>
             <p className="mt-2 text-sm leading-6 text-slate-700">{item.explanation}</p>
-            <p className="mt-2 text-xs leading-5 text-slate-500">Evidence: {item.evidence}</p>
-            {item.baseline ? <p className="mt-1 text-xs leading-5 text-slate-500">Baseline: {item.baseline}</p> : null}
+            <p className="mt-2 text-xs leading-5 text-slate-500">Based on: {item.evidence}</p>
+            {item.baseline ? <p className="mt-1 text-xs leading-5 text-slate-500">Compared with: {item.baseline}</p> : null}
           </article>
         ))}
       />
       <InsightGrid
-        title="Improvement opportunities"
-        empty="No measured improvement opportunity is available for this evidence."
+        title="What could be better"
+        empty="Nothing in the numbers we have points to a clear problem."
         items={diagnosis.improvements.map((item) => (
           <article key={`${item.title}-${item.evidence}`} className="rounded-lg border border-slate-200 p-4">
             <ClaimBadge kind={item.claim_kind} />
             <h4 className="mt-2 text-sm font-semibold">{item.title}</h4>
             <p className="mt-2 text-sm leading-6 text-slate-700">{item.explanation}</p>
-            <p className="mt-2 text-xs leading-5 text-slate-500">Evidence: {item.evidence}</p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">Based on: {item.evidence}</p>
           </article>
         ))}
       />
       <InsightGrid
         title="Possible reasons"
-        empty="No hypothesis was supported by the available evidence."
+        empty="The numbers don't point to any likely reason yet."
         items={(diagnosis.reasons ?? []).map((item) => (
           <article key={item.statement} className="rounded-lg border border-slate-200 p-4">
             <ClaimBadge kind="hypothesis" />
             <p className="mt-2 text-sm leading-6 text-slate-700">{item.statement}</p>
-            <p className="mt-2 text-xs leading-5 text-slate-500">Evidence: {item.evidence}</p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">Based on: {item.evidence}</p>
           </article>
         ))}
       />
       <InsightGrid
-        title="Recommended action plan"
-        empty="No testable action was returned."
+        title="What to try next"
+        empty="No next step was suggested."
         items={diagnosis.actions.map((item) => (
           <article key={`${item.priority}-${item.action}`} className="rounded-lg border border-slate-200 p-4">
             <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${PRIORITY_CLASS[item.priority]}`}>
@@ -150,14 +162,14 @@ function DiagnosisBody({ diagnosis }: { diagnosis: Diagnosis }) {
             </span>
             <h4 className="mt-2 text-sm font-semibold">{item.action}</h4>
             <p className="mt-2 text-sm leading-6 text-slate-700">{item.reason}</p>
-            <p className="mt-2 text-xs leading-5 text-slate-500">Evidence: {item.evidence}</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">Test: {item.success_measure}</p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">Based on: {item.evidence}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">How to check if it worked: {item.success_measure}</p>
           </article>
         ))}
       />
       <div>
-        <h3 className="text-sm font-semibold">Evidence and confidence</h3>
-        <p className="mt-2 text-sm font-medium text-slate-800">{diagnosis.evidence_quality.level}</p>
+        <h3 className="text-sm font-semibold">How sure we are</h3>
+        <p className="mt-2 text-sm font-medium text-slate-800">{levelText(diagnosis.evidence_quality.level)}</p>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">
           {diagnosis.evidence_quality.limitations.map((item) => (
             <li key={item}>{item}</li>

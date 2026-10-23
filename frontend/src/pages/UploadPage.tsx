@@ -24,13 +24,13 @@ function extension(name: string): string {
 function validateClientFile(file: File): string | null {
   const suffix = extension(file.name);
   if (suffix !== ".csv" && suffix !== ".pdf" && suffix !== ".docx") {
-    return "Upload a CSV, PDF, or DOCX file. Other formats are not supported.";
+    return "Please choose a CSV, PDF, or Word (.docx) file. Other file types aren't supported.";
   }
   if (file.size === 0) {
     return "That file is empty.";
   }
   if (file.size > MAX_DOCUMENT_BYTES) {
-    return "That file is larger than 15 MB. Choose a smaller document.";
+    return "That file is bigger than 15 MB. Please choose a smaller file.";
   }
   return null;
 }
@@ -75,7 +75,7 @@ export function UploadPage() {
       setActiveDocumentId(result.id);
       navigate(`/analysis/${result.id}`);
     } catch (error: unknown) {
-      const text = error instanceof Error ? error.message : "The upload failed.";
+          const text = error instanceof Error ? error.message : "The upload didn't work. Please try again.";
       setState({ phase: "error", file, message: text });
     }
   }
@@ -86,8 +86,8 @@ export function UploadPage() {
   return (
     <div className="space-y-6">
       <p className="max-w-2xl text-sm leading-6 text-slate-600">
-        Upload a CSV, PDF, or DOCX file. CSV statistics are calculated on the server. PDF and DOCX text is extracted
-        before any summary is written. The file is saved only when that save succeeds.
+        Upload a CSV of your posts, or a PDF or Word file. For a CSV, we work out the numbers for you. For a PDF or
+        Word file, we read the text and write a short summary. Your file is saved so you can come back to it.
       </p>
 
       <section
@@ -107,7 +107,7 @@ export function UploadPage() {
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold">Choose a document</h2>
-            <p className="mt-1 text-sm text-slate-600">Drag a file here or browse. CSV, PDF, and DOCX. Limit: 15 MB.</p>
+            <p className="mt-1 text-sm text-slate-600">Drag a file here, or click Browse. CSV, PDF, or Word (.docx), up to 15 MB.</p>
           </div>
           <label htmlFor="dataset-file" className="btn-secondary cursor-pointer">
             Browse files
@@ -149,7 +149,7 @@ export function UploadPage() {
         ) : null}
         {state.phase === "uploading" ? (
           <p className="mt-4 text-sm text-slate-600" role="status">
-            Analysing {selected?.name}. Upload progress {state.progress}%.
+            Analysing {selected?.name}… {state.progress}% uploaded.
           </p>
         ) : null}
 
@@ -167,10 +167,10 @@ export function UploadPage() {
             Open the list
           </Link>
         </div>
-        {saved.status === "loading" ? <p className="mt-3 text-sm text-slate-500">Loading saved analyses.</p> : null}
+        {saved.status === "loading" ? <p className="mt-3 text-sm text-slate-500">Loading your saved files…</p> : null}
         {saved.status === "error" ? <p className="mt-3 text-sm text-red-700">{saved.error}</p> : null}
         {saved.status === "success" && saved.data.documents.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">No documents have been saved yet.</p>
+          <p className="mt-3 text-sm text-slate-500">You haven't saved any files yet.</p>
         ) : null}
         {saved.status === "success" && saved.data.documents.length > 0 ? (
           <ul className="mt-4 divide-y divide-slate-200">

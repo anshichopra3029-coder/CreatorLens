@@ -77,7 +77,7 @@ class AnalyticsAnalysisResponse(BaseModel):
     narrative_message: str
     narrative: AnalyticsNarrative | None = None
     diagnosis_status: Literal["generated", "calculated", "unavailable"] = "unavailable"
-    diagnosis_message: str = "No performance diagnosis was stored with this analysis."
+    diagnosis_message: str = "No performance check was saved with this analysis."
     diagnosis: PerformanceDiagnosis | None = None
     diagnosis_evidence: DiagnosisEvidence | None = None
     model: str | None = None

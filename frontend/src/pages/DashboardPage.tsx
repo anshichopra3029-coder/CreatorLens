@@ -24,14 +24,15 @@ function DashboardDemo() {
   return (
     <div className="space-y-6">
       <DemoBanner>
-        Sample metrics below come from the built-in demo dataset. They are not results from a file you upload.
+        You're looking at sample numbers from our built-in demo data, not your own file. Upload a file to see your
+        own results here.
       </DemoBanner>
 
       <QueryPanel
         query={summary}
-        loadingLabel="Loading demo summary"
+        loadingLabel="Loading the demo summary…"
         emptyTitle="No demo posts"
-        emptyBody="The demo dataset did not return any posts."
+        emptyBody="The demo data didn't return any posts."
         isEmpty={(data) => data.posts_analyzed === 0}
       >
         {(data) => (
@@ -40,22 +41,22 @@ function DashboardDemo() {
               <KpiCard
                 label="Posts analyzed"
                 value={formatNumber(data.posts_analyzed)}
-                detail="Demo data · count of posts in the sample"
+                detail="Demo data · how many posts are in the sample"
               />
               <KpiCard
                 label="Avg. engagement rate"
                 value={formatRate(data.avg_engagement_rate)}
-                detail="Demo data · mean of per-post view-based rates"
+                detail="Demo data · on average, likes, comments, and shares compared with views"
               />
               <KpiCard
                 label="Total interactions"
                 value={formatNumber(data.total_interactions)}
-                detail="Demo data · likes + comments + shares"
+                detail="Demo data · all likes, comments, and shares added up"
               />
               <KpiCard
                 label="Best category"
                 value={data.best_category ?? "—"}
-                detail="Demo data · highest average engagement rate"
+                detail="Demo data · the type of content with the most engagement"
               />
             </section>
             <MetricCaption formula={data.metric_formula} />
@@ -66,12 +67,12 @@ function DashboardDemo() {
       <section className="grid gap-4 lg:grid-cols-5">
         <div className="card p-5 lg:col-span-3">
           <h2 className="text-base font-semibold">Engagement over time</h2>
-          <p className="mb-4 mt-1 text-sm text-slate-500">Weekly average from the demo posts.</p>
+          <p className="mb-4 mt-1 text-sm text-slate-500">Average for each week, from the demo posts.</p>
           <QueryPanel
             query={trends}
-            loadingLabel="Loading demo trend"
-            emptyTitle="No trend points"
-            emptyBody="The demo dataset has no dated posts to chart."
+            loadingLabel="Loading the demo trend…"
+            emptyTitle="Nothing to chart yet"
+            emptyBody="The demo data has no dated posts to chart."
             isEmpty={(data) => data.points.length === 0}
           >
             {(data) => <EngagementTrendChart points={data.points} />}
@@ -79,12 +80,12 @@ function DashboardDemo() {
         </div>
         <div className="card p-5 lg:col-span-2">
           <h2 className="text-base font-semibold">Category comparison</h2>
-          <p className="mb-4 mt-1 text-sm text-slate-500">Average rate by category in the demo set.</p>
+          <p className="mb-4 mt-1 text-sm text-slate-500">Average engagement for each type of content in the demo data.</p>
           <QueryPanel
             query={comparison}
-            loadingLabel="Loading demo comparison"
+            loadingLabel="Loading the demo comparison…"
             emptyTitle="No categories"
-            emptyBody="The demo dataset has no categories to compare."
+            emptyBody="The demo data has no categories to compare."
             isEmpty={(data) => data.categories.length === 0}
           >
             {(data) => <CategoryComparisonChart categories={data.categories} />}
@@ -101,9 +102,9 @@ function DashboardDemo() {
         </div>
         <QueryPanel
           query={posts}
-          loadingLabel="Loading demo posts"
+          loadingLabel="Loading demo posts…"
           emptyTitle="No posts"
-          emptyBody="The demo dataset did not return any posts."
+          emptyBody="The demo data didn't return any posts."
           isEmpty={(data) => data.posts.length === 0}
         >
           {(data) => <PostsTable posts={data.posts.slice(0, 6)} caption="Six most recent posts from the demo dataset" />}
@@ -114,9 +115,9 @@ function DashboardDemo() {
         <h2 className="text-base font-semibold">Demo insights</h2>
         <QueryPanel
           query={insights}
-          loadingLabel="Loading demo insights"
+          loadingLabel="Loading demo insights…"
           emptyTitle="No insights"
-          emptyBody="The demo dataset did not produce any insight cards."
+          emptyBody="The demo data didn't produce any insights."
           isEmpty={(data) => data.cards.length === 0}
         >
           {(data) => (
