@@ -151,6 +151,7 @@ def train_from_frame(
     source_kind: str,
     source_id: str | None,
     source_label: str,
+    testing_only: bool = False,
 ) -> EngagementModelInfo:
     _check_id(model_id)
     from sklearn.inspection import permutation_importance
@@ -246,6 +247,11 @@ def train_from_frame(
     if not beats_baseline:
         limitations.append(
             "No model did better than a simple average guess on the test posts, so this model won't make predictions."
+        )
+    if testing_only:
+        limitations.insert(
+            0,
+            "Development/testing result from synthetic posts. These scores are not evidence of real-world predictive accuracy.",
         )
 
     info = EngagementModelInfo(
@@ -519,7 +525,7 @@ def _prepare(raw: pd.DataFrame) -> dict[str, Any]:
     known_outcomes = {
         "views", "view_count", "plays", "likes", "like_count", "comments", "comment_count", "shares", "share_count",
         "saves", "followers_gained", "subscribers_gained", "reach", "impressions", "watch_time", "ctr",
-        "engagement_rate", "retention", "average_view_duration",
+        "engagement_rate", "retention", "average_view_duration", "post_id", "postid", "id",
     }
     excluded = sorted(column for column in columns if column in known_outcomes)
     formula = "(likes + comments + shares) / views * 100" if has_shares else "(likes + comments) / views * 100"
@@ -686,12 +692,24 @@ def main(argv: list[str] | None = None) -> int:
     group.add_argument("--document", help="Id of a saved CSV document in backend/data.")
     group.add_argument("--demo", action="store_true", help="Use the built-in demo posts.")
     parser.add_argument("--model-id", help="Name for the saved model (letters, digits, hyphens).")
+    parser.add_argument(
+        "--testing",
+        action="store_true",
+        help="Label this run as synthetic development data, not real-world accuracy.",
+    )
     args = parser.parse_args(argv)
     try:
         if args.csv is not None:
             frame = read_posts_csv(args.csv)
             model_id = args.model_id or re.sub(r"[^a-z0-9-]+", "-", args.csv.stem.lower()).strip("-")[:60] or "file"
-            info = train_from_frame(frame, model_id=model_id, source_kind="file", source_id=None, source_label=args.csv.name)
+            info = train_from_frame(
+                frame,
+                model_id=model_id,
+                source_kind="file",
+                source_id=None,
+                source_label=args.csv.name,
+                testing_only=args.testing,
+            )
         elif args.document:
             info = train_from_document(args.document, user_id="local", model_id=args.model_id)
         else:

@@ -80,6 +80,26 @@ def test_training_compares_models_on_a_chronological_holdout(isolated):
     assert (isolated / "models" / "test-posts.json").is_file()
 
 
+def test_synthetic_csv_shape_maps_duration_and_excludes_identifiers(isolated):
+    frame = _posts(rows=40)
+    frame["duration"] = [30 + index for index in range(40)]
+    info = em.train_from_frame(
+        frame,
+        model_id="duration-alias",
+        source_kind="file",
+        source_id=None,
+        source_label="synthetic development sample",
+        testing_only=True,
+    )
+    assert info.split == "chronological"
+    assert set(info.features) == {"platform", "category", "posted_at", "title", "duration_seconds"}
+    for column in ("views", "likes", "comments", "shares", "followers_gained", "post_id"):
+        assert column not in info.features
+    assert "post_id" in info.excluded_columns
+    assert info.limitations[0].startswith("Development/testing result")
+    assert "not evidence of real-world" in info.limitations[0]
+
+
 def test_outcome_columns_are_never_features(isolated):
     info = _train()
     assert set(info.features) == {"platform", "category", "posted_at", "title"}
